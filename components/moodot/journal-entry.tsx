@@ -1,12 +1,17 @@
 "use client"
 
 import { Send } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 
 export function JournalEntry() {
+  const router = useRouter()
+
   return (
     <section className="pt-8">
       <Button
+        type="button"
+        onClick={() => router.push("/memory-create")}
         className="w-full h-14 rounded-full bg-gradient-to-r from-mb-primary to-mb-secondary hover:opacity-90 text-white font-heading font-semibold text-base shadow-lg shadow-mb-primary/40 transition-all duration-200"
       >
         기록 저장하기
