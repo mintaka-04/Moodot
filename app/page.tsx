@@ -1,6 +1,5 @@
 import { TopAppBar } from "@/components/moodot/top-app-bar"
 import { WelcomeHeader } from "@/components/moodot/welcome-header"
-import { MoodSelector } from "@/components/moodot/mood-selector"
 import { JournalEntry } from "@/components/moodot/journal-entry"
 import { AIInsight } from "@/components/moodot/ai-insight"
 import { RecentReflections } from "@/components/moodot/recent-reflections"
@@ -10,7 +9,7 @@ export default function MoodotHome() {
   return (
     <div className="min-h-screen bg-mb-bg relative overflow-hidden">
       {/* Decorative blurred orb matching logo gradient sphere */}
-      <div 
+      <div
         className="absolute top-0 right-0 w-80 h-80 pointer-events-none"
         aria-hidden="true"
       >
@@ -23,7 +22,6 @@ export default function MoodotHome() {
       {/* Main Content */}
       <main className="relative mx-auto max-w-[375px] px-5 pt-20 pb-32">
         <WelcomeHeader />
-        <MoodSelector />
         <JournalEntry />
         <AIInsight />
         <RecentReflections />
