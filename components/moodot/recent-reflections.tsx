@@ -1,28 +1,63 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+
+type MemoryRow = {
+  id: number
+  title: string | null
+  text: string | null
+  emotion_id: number | null
+  memory_at: string | null
+}
+
+const EMOTION_COLOR_MAP: Record<number, string> = {
+  1: "#FFE8B8",
+  2: "#F8C8C8",
+  3: "#B0E4F8",
+  4: "#C0ECD8",
+}
+
+function formatMemoryDate(value: string | null) {
+  if (!value) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  return date.toLocaleString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
 
 interface ReflectionCardProps {
-  dotColor: string
+  color: string
   label: string
   text: string
   variant: "primary" | "secondary"
+  onClick?: () => void
 }
 
-function ReflectionCard({ dotColor, label, text, variant }: ReflectionCardProps) {
+function ReflectionCard({ color, label, text, variant, onClick }: ReflectionCardProps) {
   const isPrimary = variant === "primary"
-  
+
   return (
     <div
+      onClick={onClick}
       className={
-        isPrimary
+        (isPrimary
           ? "bg-mb-card rounded-xl p-4 shadow-sm shadow-mb-dark/5"
-          : "bg-white/60 rounded-xl p-4 border border-mb-unselected"
+          : "bg-white/60 rounded-xl p-4 border border-mb-unselected") +
+        (onClick ? " cursor-pointer transition-all duration-200 hover:-translate-y-0.5" : "")
       }
     >
       <div className="flex items-center mb-3">
         <div className="flex items-center gap-2">
           <span
             className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: dotColor }}
+            style={{ backgroundColor: color }}
           />
           <span className="text-[10px] uppercase tracking-wider text-mb-muted font-body font-medium">
             {label}
@@ -33,6 +68,12 @@ function ReflectionCard({ dotColor, label, text, variant }: ReflectionCardProps)
         className={`font-body text-sm leading-relaxed ${
           isPrimary ? "text-mb-dark" : "text-mb-muted"
         }`}
+        style={{
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
       >
         {text}
       </p>
@@ -41,6 +82,33 @@ function ReflectionCard({ dotColor, label, text, variant }: ReflectionCardProps)
 }
 
 export function RecentReflections() {
+  const [memories, setMemories] = useState<MemoryRow[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    let mounted = true
+
+    const fetchMemories = async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data } = await supabase
+          .from("memories")
+          .select("id,title,text,emotion_id,memory_at")
+          .order("memory_at", { ascending: false })
+          .limit(2)
+
+        if (!mounted) return
+        setMemories((data as MemoryRow[]) ?? [])
+      } finally {
+        if (mounted) setIsLoading(false)
+      }
+    }
+
+    void fetchMemories()
+    return () => { mounted = false }
+  }, [])
+
   return (
     <section className="pt-8">
       <div className="flex items-center justify-between mb-4">
@@ -50,25 +118,36 @@ export function RecentReflections() {
         <Button
           variant="ghost"
           className="h-auto p-0 text-xs text-mb-primary hover:text-mb-primary-dark hover:bg-transparent font-body font-medium"
+          onClick={() => router.push("/records")}
         >
           전체보기
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <ReflectionCard
-          dotColor="#7CC4D8"
-          label="어제 저녁"
-          text="저녁 명상이 긴 회의 후 마음을 비우는 데 도움이 됐어요. 마음이 차분해졌어요."
-          variant="primary"
-        />
-        <ReflectionCard
-          dotColor="#D0C8F0"
-          label="이틀 전"
-          text="조용한 아침. 차를 마시며 새소리를 들었어요. 에너지가 좀 낮지만 괜찮아요."
-          variant="secondary"
-        />
-      </div>
+      {isLoading ? (
+        <p className="py-4 text-center text-sm text-mb-muted">불러오는 중...</p>
+      ) : memories.length === 0 ? (
+        <p className="py-4 text-center text-sm text-mb-muted">기록이 없습니다.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {memories.map((memory, index) => {
+            const color = EMOTION_COLOR_MAP[memory.emotion_id ?? 1] ?? EMOTION_COLOR_MAP[1]
+            const label = formatMemoryDate(memory.memory_at)
+            const text = memory.text?.trim() || memory.title?.trim() || "내용 없음"
+
+            return (
+              <ReflectionCard
+                key={memory.id}
+                color={color}
+                label={label}
+                text={text}
+                variant={index === 0 ? "primary" : "secondary"}
+                onClick={() => router.push(`/memory/${memory.id}`)}
+              />
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }

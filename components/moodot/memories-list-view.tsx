@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Search, User, Users } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -40,6 +41,7 @@ export function MemoriesListView() {
   const [searchText, setSearchText] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState("")
+  const router = useRouter()
 
   useEffect(() => {
     let mounted = true
@@ -111,7 +113,8 @@ export function MemoriesListView() {
             return (
               <article
                 key={memory.id}
-                className="relative overflow-hidden rounded-xl bg-mb-card px-5 py-4 transition-all duration-200 hover:-translate-y-0.5"
+                className="relative overflow-hidden rounded-xl bg-mb-card px-5 py-4 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+                onClick={() => router.push(`/memory/${memory.id}`)}
               >
                 <div className="absolute left-0 top-0 h-full w-1.5" style={{ backgroundColor: color }} />
 
