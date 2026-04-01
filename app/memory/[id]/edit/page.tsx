@@ -7,6 +7,7 @@ import {
   Clock3, ChevronRight, ImagePlus, MapPinned, Trash2,
 } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { getMemoryById, updateMemory, deleteMemory } from "@/lib/services/memory"
 import { BottomNavigation } from "@/components/moodot/bottom-navigation"
 
 // --- Leaflet types (identical to creation screen) ---
@@ -127,14 +128,7 @@ export default function EditMemoryPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const supabase = getSupabaseBrowserClient()
-        const { data, error } = await supabase
-          .from("memories")
-          .select("title,text,image_url,emotion_id,with_whom,memory_at,place_name,location_label,location_lat,location_lng")
-          .eq("id", memoryId)
-          .single()
-
-        if (error) throw error
+        const data = await getMemoryById(memoryId)
 
         setMood(EMOTION_ID_REVERSE[data.emotion_id ?? 1] ?? "good")
         setWithWho((data.with_whom ?? "Solo").toLowerCase() === "together" ? "together" : "solo")
@@ -258,9 +252,7 @@ export default function EditMemoryPage() {
   const handleDelete = async () => {
     if (!confirm("이 기록을 삭제할까요? 되돌릴 수 없습니다.")) return
     try {
-      const supabase = getSupabaseBrowserClient()
-      const { error } = await supabase.from("memories").delete().eq("id", memoryId)
-      if (error) throw error
+      await deleteMemory(memoryId)
       router.replace("/records")
     } catch (e) {
       alert(`삭제 실패: ${e instanceof Error ? e.message : ""}`)
@@ -273,8 +265,7 @@ export default function EditMemoryPage() {
 
     setIsSaving(true)
     try {
-      const supabase = getSupabaseBrowserClient()
-      const { error } = await supabase.from("memories").update({
+      await updateMemory(memoryId, {
         title:          title.trim() || null,
         text:           text.trim() || null,
         image_url:      imageUrl,
@@ -285,9 +276,7 @@ export default function EditMemoryPage() {
         location_lng:   locationLng,
         location_label: locationLabel.trim() || null,
         place_name:     placeName.trim() || null,
-      }).eq("id", memoryId)
-
-      if (error) throw error
+      })
       router.push(`/memory/${memoryId}`)
     } catch (e) {
       alert(`저장 실패: ${e instanceof Error ? e.message : ""}`)

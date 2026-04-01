@@ -3,16 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Search, User, Users, Plus } from "lucide-react"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-
-type MemoryRow = {
-  id: number
-  title: string | null
-  text: string | null
-  emotion_id: number | null
-  with_whom: string | null
-  memory_at: string | null
-}
+import { getMemories, type MemoryRow } from "@/lib/services/memory"
 
 const EMOTION_COLOR_MAP: Record<number, string> = {
   1: "#FFE8B8",
@@ -51,15 +42,9 @@ export function MemoriesListView() {
       setErrorMessage("")
 
       try {
-        const supabase = getSupabaseBrowserClient()
-        const { data, error } = await supabase
-          .from("memories")
-          .select("id,title,text,emotion_id,with_whom,memory_at")
-          .order("memory_at", { ascending: false })
-
-        if (error) throw error
+        const data = await getMemories()
         if (!mounted) return
-        setMemories((data as MemoryRow[]) ?? [])
+        setMemories(data)
       } catch (error) {
         if (!mounted) return
         const message = error instanceof Error ? error.message : "메모리를 불러오지 못했습니다."
