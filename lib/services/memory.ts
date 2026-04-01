@@ -84,14 +84,14 @@ export async function getMemoryById(id: number): Promise<MemoryRow> {
 /** 새 메모리 생성. 에러 시 throw. */
 export async function createMemory(input: CreateMemoryInput): Promise<void> {
   const supabase = getSupabaseBrowserClient()
-  const { error } = await supabase.from("memories").insert(input)
+  const { error } = await supabase.from("memories").insert(input as unknown as never)
   if (error) throw error
 }
 
 /** 기존 메모리 수정. 에러 시 throw. */
 export async function updateMemory(id: number, input: UpdateMemoryInput): Promise<void> {
   const supabase = getSupabaseBrowserClient()
-  const { error } = await supabase.from("memories").update(input).eq("id", id)
+  const { error } = await supabase.from("memories").update(input as unknown as never).eq("id", id)
   if (error) throw error
 }
 
