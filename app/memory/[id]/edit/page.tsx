@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import {
   X, Smile, Frown, Meh, Leaf,
-  Clock3, ChevronRight, ImagePlus, MapPinned,
+  Clock3, ChevronRight, ImagePlus, MapPinned, Trash2,
 } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { BottomNavigation } from "@/components/moodot/bottom-navigation"
@@ -255,6 +255,18 @@ export default function EditMemoryPage() {
     setIsMapOpen(false)
   }
 
+  const handleDelete = async () => {
+    if (!confirm("이 기록을 삭제할까요? 되돌릴 수 없습니다.")) return
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.from("memories").delete().eq("id", memoryId)
+      if (error) throw error
+      router.replace("/records")
+    } catch (e) {
+      alert(`삭제 실패: ${e instanceof Error ? e.message : ""}`)
+    }
+  }
+
   const handleSave = async () => {
     if (!memoryAt) { alert("날짜/시간을 선택해 주세요."); return }
     if (uploadStatus === "uploading") { alert("사진 업로드가 완료된 후 저장해 주세요."); return }
@@ -430,11 +442,17 @@ export default function EditMemoryPage() {
         )}
 
         {/* 저장 */}
-        <section className="mt-2">
+        <section className="mt-2 flex flex-col gap-3">
           <button type="button" onClick={() => void handleSave()}
             disabled={isSaving || uploadStatus === "uploading"}
             className="h-14 w-full rounded-full bg-gradient-to-br from-mb-primary to-mb-secondary font-heading text-[16px] font-semibold text-white shadow-[0px_8px_24px_rgba(124,196,216,0.3)] transition-transform duration-200 active:scale-[0.99] disabled:opacity-70">
             {isSaving ? "저장 중..." : "수정 완료"}
+          </button>
+          <button type="button" onClick={() => void handleDelete()}
+            disabled={isSaving}
+            className="flex w-full items-center justify-center gap-2 h-12 rounded-full bg-[#F8C8C8]/60 font-body text-sm font-semibold text-[#A65E5E] transition-all duration-200 hover:bg-[#F8C8C8]/90 active:scale-[0.98] disabled:opacity-50">
+            <Trash2 className="w-4 h-4" />
+            기록 삭제
           </button>
         </section>
       </main>
