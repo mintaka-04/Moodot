@@ -103,11 +103,11 @@ export function MemoriesListView() {
         <button
           type="button"
           onClick={() => router.push("/memory-create")}
-          className="flex items-center gap-2 h-11 rounded-full bg-gradient-to-br from-mb-primary to-mb-secondary font-heading text-[14px] font-semibold text-white shadow-[0px_6px_20px_rgba(124,196,216,0.3)] transition-transform duration-200 active:scale-95"
+          className="flex items-center justify-center gap-2 h-11 rounded-full bg-gradient-to-br from-mb-primary to-mb-secondary font-heading text-[14px] font-semibold text-white shadow-[0px_6px_20px_rgba(124,196,216,0.3)] transition-transform duration-200 active:scale-95"
           style={{ width: "80%" }}
         >
-          <Plus className="w-4 h-4 flex-shrink-0 ml-4" />
-          <span className="flex-1 text-center pr-4">기록 남기기</span>
+          <Plus className="w-4 h-4 flex-shrink-0" />
+          기록 남기기
         </button>
       </div>
 
