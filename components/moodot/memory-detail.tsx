@@ -216,7 +216,7 @@ export function MemoryDetail({ id }: { id: number }) {
       {/* 본문 */}
       {memory.text?.trim() && (
         <section className="bg-mb-card rounded-2xl p-6 shadow-[0px_8px_24px_rgba(43,52,54,0.04)]">
-          <p className="font-body text-sm leading-relaxed text-mb-dark/80">
+          <p className="font-body text-sm leading-relaxed text-mb-dark/80 whitespace-pre-wrap">
             {memory.text}
           </p>
         </section>
