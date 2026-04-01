@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation"
 import { Smile, Frown, CloudRain, Leaf, User, Users, MapPin, Pencil } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-// --- Leaflet types (same as creation screen) ---
-declare global {
-  interface Window { L?: LeafletLib }
+// --- Leaflet types ---
+declare global { interface Window { L?: LeafletLib } }
+type LeafletMap = {
+  setView(latlng: [number, number], zoom: number): LeafletMap
+  invalidateSize(): void
+  remove(): void
 }
-type LeafletMap    = { setView(latlng: [number, number], zoom: number): LeafletMap; remove(): void }
-type LeafletMarker = { addTo(map: LeafletMap): LeafletMarker }
+type LeafletMarker    = { addTo(map: LeafletMap): LeafletMarker }
 type LeafletTileLayer = { addTo(map: LeafletMap): void }
 type LeafletLib = {
-  map(container: HTMLElement, options: { zoomControl: boolean; dragging: boolean; scrollWheelZoom: boolean }): LeafletMap
+  map(container: HTMLElement, options: object): LeafletMap
   tileLayer(url: string, options: { attribution: string; maxZoom: number }): LeafletTileLayer
   marker(latlng: [number, number]): LeafletMarker
 }
@@ -35,6 +37,8 @@ function loadLeafletAssets(): Promise<void> {
 
     const existing = document.querySelector('script[data-leaflet="true"]')
     if (existing) {
+      // 이미 로딩 완료된 경우
+      if (window.L) { resolve(); return }
       existing.addEventListener("load", () => resolve())
       existing.addEventListener("error", () => reject(new Error("Leaflet load failed")))
       return
@@ -48,7 +52,6 @@ function loadLeafletAssets(): Promise<void> {
     script.onerror = () => reject(new Error("Leaflet load failed"))
     document.body.appendChild(script)
   })
-
   return leafletLoader
 }
 
@@ -84,10 +87,10 @@ function formatDate(value: string | null) {
   })
 }
 
-// --- Read-only map component ---
+// --- Read-only map ---
 function LocationMap({ lat, lng }: { lat: number; lng: number }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<LeafletMap | null>(null)
+  const mapRef       = useRef<LeafletMap | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -96,12 +99,16 @@ function LocationMap({ lat, lng }: { lat: number; lng: number }) {
       await loadLeafletAssets()
       if (cancelled || !containerRef.current || !window.L) return
 
+      // 이미 지도가 있으면 제거 후 재생성
+      mapRef.current?.remove()
+
       const L = window.L
       const map = L.map(containerRef.current, {
         zoomControl: true,
         dragging: false,
         scrollWheelZoom: false,
-      }).setView([lat, lng], 15)   // 줌 레벨 15 — 생성 화면과 동일
+        doubleClickZoom: false,
+      }).setView([lat, lng], 15)
       mapRef.current = map
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -110,6 +117,11 @@ function LocationMap({ lat, lng }: { lat: number; lng: number }) {
       }).addTo(map)
 
       L.marker([lat, lng]).addTo(map)
+
+      // 컨테이너 크기 확정 후 타일 재계산
+      setTimeout(() => {
+        if (!cancelled) map.invalidateSize()
+      }, 100)
     }
 
     void init()
@@ -124,17 +136,16 @@ function LocationMap({ lat, lng }: { lat: number; lng: number }) {
   return (
     <div
       ref={containerRef}
-      className="h-full w-full"
-      style={{ minHeight: "200px" }}
+      style={{ width: "100%", height: "208px" }}
     />
   )
 }
 
 // --- Main component ---
 export function MemoryDetail({ id }: { id: number }) {
-  const [memory, setMemory] = useState<MemoryRow | null>(null)
+  const [memory,    setMemory]    = useState<MemoryRow | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState("")
+  const [error,     setError]     = useState("")
   const router = useRouter()
 
   useEffect(() => {
@@ -167,15 +178,15 @@ export function MemoryDetail({ id }: { id: number }) {
   if (isLoading) return <p className="py-12 text-center text-sm text-mb-muted">불러오는 중...</p>
   if (error || !memory) return <p className="py-12 text-center text-sm text-mb-muted">{error || "기록을 찾을 수 없습니다."}</p>
 
-  const emotion = EMOTION_MAP[memory.emotion_id ?? 1] ?? EMOTION_MAP[1]
-  const EmotionIcon = emotion.icon
-  const isTogether = (memory.with_whom ?? "").toLowerCase() === "together"
+  const emotion      = EMOTION_MAP[memory.emotion_id ?? 1] ?? EMOTION_MAP[1]
+  const EmotionIcon  = emotion.icon
+  const isTogether   = (memory.with_whom ?? "").toLowerCase() === "together"
   const WithWhomIcon = isTogether ? Users : User
   const withWhomLabel = isTogether ? "TOGETHER" : "SOLO"
-  const hasLocation = memory.location_lat !== null && memory.location_lng !== null
+  const hasLocation  = memory.location_lat !== null && memory.location_lng !== null
 
   return (
-    <div className="space-y-5 pt-4">
+    <div className="flex flex-col gap-5 pt-4">
       {/* 제목 영역 */}
       <header className="flex flex-col items-center text-center gap-3">
         <div className="flex items-center justify-center gap-3">
@@ -225,17 +236,14 @@ export function MemoryDetail({ id }: { id: number }) {
         </section>
       )}
 
-      {/* 지도 + 위치 정보 */}
+      {/* 지도 + 위치 */}
       {hasLocation && (
         <section className="overflow-hidden rounded-xl shadow-[0px_4px_16px_rgba(43,52,54,0.05)]">
-          {/* 지도 */}
-          <div className="h-52 w-full bg-mb-unselected">
+          <div className="bg-mb-unselected" style={{ height: "208px" }}>
             <LocationMap lat={memory.location_lat!} lng={memory.location_lng!} />
           </div>
-
-          {/* 위치 텍스트 */}
           {(memory.place_name || memory.location_label) && (
-            <div className="bg-mb-unselected px-4 py-3 flex items-center gap-3">
+            <div className="bg-mb-unselected px-4 py-3 flex items-center gap-3 border-t border-white/40">
               <MapPin className="w-4 h-4 text-mb-primary flex-shrink-0" />
               <div className="min-w-0">
                 {memory.place_name && (
@@ -258,7 +266,7 @@ export function MemoryDetail({ id }: { id: number }) {
       <button
         type="button"
         onClick={() => router.push(`/memory/${memory.id}/edit`)}
-        className="mt-2 flex w-full items-center justify-center gap-2 h-12 rounded-full bg-mb-unselected font-body text-sm font-semibold text-mb-dark/70 transition-all duration-200 hover:bg-mb-unselected/80 active:scale-[0.98]"
+        className="flex w-full items-center justify-center gap-2 h-12 rounded-full bg-mb-unselected font-body text-sm font-semibold text-mb-dark/70 transition-all duration-200 hover:bg-mb-unselected/60 active:scale-[0.98]"
       >
         <Pencil className="w-4 h-4" />
         수정하기
