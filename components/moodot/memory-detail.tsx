@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import type { LeafletMap, LeafletMarker } from "@/types/leaflet"
 import { Smile, Frown, CloudRain, Leaf, User, Users, MapPin, Pencil } from "lucide-react"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { getMemoryById, type MemoryRow } from "@/lib/services/memory"
 
 
 let leafletLoader: Promise<void> | null = null
@@ -42,20 +42,6 @@ function loadLeafletAssets(): Promise<void> {
   return leafletLoader
 }
 
-// --- Data types ---
-type MemoryRow = {
-  id: number
-  title: string | null
-  text: string | null
-  image_url: string | null
-  emotion_id: number | null
-  with_whom: string | null
-  memory_at: string | null
-  place_name: string | null
-  location_label: string | null
-  location_lat: number | null
-  location_lng: number | null
-}
 
 const EMOTION_MAP: Record<number, { icon: React.ElementType; color: string }> = {
   1: { icon: Smile,     color: "#FFE8B8" },
@@ -140,16 +126,9 @@ export function MemoryDetail({ id }: { id: number }) {
 
     const fetchMemory = async () => {
       try {
-        const supabase = getSupabaseBrowserClient()
-        const { data, error } = await supabase
-          .from("memories")
-          .select("id,title,text,image_url,emotion_id,with_whom,memory_at,place_name,location_label,location_lat,location_lng")
-          .eq("id", id)
-          .single()
-
-        if (error) throw error
+        const data = await getMemoryById(id)
         if (!mounted) return
-        setMemory(data as MemoryRow)
+        setMemory(data)
       } catch (e) {
         if (!mounted) return
         setError(e instanceof Error ? e.message : "불러오지 못했습니다.")
@@ -203,7 +182,7 @@ export function MemoryDetail({ id }: { id: number }) {
       {/* 본문 */}
       {memory.text?.trim() && (
         <section className="bg-mb-card rounded-2xl p-6 shadow-[0px_8px_24px_rgba(43,52,54,0.04)]">
-          <p className="font-body text-sm leading-relaxed text-mb-dark/80">
+          <p className="font-body text-sm leading-relaxed text-mb-dark/80 whitespace-pre-wrap">
             {memory.text}
           </p>
         </section>

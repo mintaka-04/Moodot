@@ -3,15 +3,7 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-
-type MemoryRow = {
-  id: number
-  title: string | null
-  text: string | null
-  emotion_id: number | null
-  memory_at: string | null
-}
+import { getRecentMemories, type MemoryRow } from "@/lib/services/memory"
 
 const EMOTION_COLOR_MAP: Record<number, string> = {
   1: "#FFE8B8",
@@ -36,22 +28,14 @@ interface ReflectionCardProps {
   color: string
   label: string
   text: string
-  variant: "primary" | "secondary"
   onClick?: () => void
 }
 
-function ReflectionCard({ color, label, text, variant, onClick }: ReflectionCardProps) {
-  const isPrimary = variant === "primary"
-
+function ReflectionCard({ color, label, text, onClick }: ReflectionCardProps) {
   return (
     <div
       onClick={onClick}
-      className={
-        (isPrimary
-          ? "bg-mb-card rounded-xl p-4 shadow-sm shadow-mb-dark/5"
-          : "bg-white/60 rounded-xl p-4 border border-mb-unselected") +
-        (onClick ? " cursor-pointer transition-all duration-200 hover:-translate-y-0.5" : "")
-      }
+      className={"bg-mb-card rounded-xl p-4 shadow-sm shadow-mb-dark/5" + (onClick ? " cursor-pointer transition-all duration-200 hover:-translate-y-0.5" : "")}
     >
       <div className="flex items-center mb-3">
         <div className="flex items-center gap-2">
@@ -65,9 +49,7 @@ function ReflectionCard({ color, label, text, variant, onClick }: ReflectionCard
         </div>
       </div>
       <p
-        className={`font-body text-sm leading-relaxed ${
-          isPrimary ? "text-mb-dark" : "text-mb-muted"
-        }`}
+        className="font-body text-sm leading-relaxed text-mb-dark"
         style={{
           display: "-webkit-box",
           WebkitLineClamp: 2,
@@ -91,15 +73,11 @@ export function RecentReflections() {
 
     const fetchMemories = async () => {
       try {
-        const supabase = getSupabaseBrowserClient()
-        const { data } = await supabase
-          .from("memories")
-          .select("id,title,text,emotion_id,memory_at")
-          .order("memory_at", { ascending: false })
-          .limit(2)
-
+        const data = await getRecentMemories(2)
         if (!mounted) return
-        setMemories((data as MemoryRow[]) ?? [])
+        setMemories(data)
+      } catch {
+        // 기존 동작 유지: 에러 시 빈 목록으로 처리
       } finally {
         if (mounted) setIsLoading(false)
       }
@@ -141,7 +119,6 @@ export function RecentReflections() {
                 color={color}
                 label={label}
                 text={text}
-                variant={index === 0 ? "primary" : "secondary"}
                 onClick={() => router.push(`/memory/${memory.id}`)}
               />
             )

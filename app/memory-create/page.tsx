@@ -15,6 +15,7 @@ import {
   MapPinned,
 } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { createMemory } from "@/lib/services/memory"
 import { BottomNavigation } from "@/components/moodot/bottom-navigation"
 
 type MoodType = "good" | "bad" | "sad" | "calm"
@@ -313,9 +314,7 @@ export default function CreatePage() {
 
     setIsSaving(true)
     try {
-      const supabase = getSupabaseBrowserClient()
-
-      const { error } = await supabase.from("memories").insert({
+      await createMemory({
         title: title.trim() === "" ? null : title.trim(),
         text: text.trim() === "" ? null : text.trim(),
         image_url: imageUrl,
@@ -327,8 +326,6 @@ export default function CreatePage() {
         place_name: placeName.trim() === "" ? null : placeName.trim(),
         memory_at: new Date(memoryAt).toISOString(),
       })
-
-      if (error) throw error
       alert("기록이 저장되었습니다.")
     } catch (error) {
       const message = error instanceof Error ? error.message : "저장 중 오류가 발생했습니다."
