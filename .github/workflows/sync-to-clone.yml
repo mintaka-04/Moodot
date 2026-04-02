@@ -1,0 +1,33 @@
+name: Sync to Clone Repo
+
+on:
+  push:
+    branches:
+      - develop  # 원본의 develop 브랜치에 푸시/머지될 때 실행
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 원본 레포 코드 가져오기
+      - name: Checkout Original Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.CLONE_TOKEN }}
+
+      # 2. 너의 정보로 Git 설정하기
+      - name: Set Git Config
+        run: |
+          git config --global user.name "ueeeeing"
+          git config --global user.email "ueeeeing@a@a.com"
+
+      # 3. 클론 레포로 강제 푸시하기
+      - name: Push to Clone Repo
+        run: |
+          # 원격 저장소 추가 (ueeeeing/moodot-clone)
+          REMOTE_REPO="https://${{ secrets.CLONE_TOKEN }}@github.com/ueeeeing/moodot-clone.git"
+          git remote add clone-target $REMOTE_REPO
+          
+          # 원본의 develop 내용을 클론 레포의 develop으로 덮어쓰기
+          git push clone-target develop --force
