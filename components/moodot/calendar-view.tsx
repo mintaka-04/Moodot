@@ -4,27 +4,13 @@ import { useState } from "react"
 import { ChevronLeft, ChevronRight, Smile, Frown, CloudRain, Leaf, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-type MoodType = "good" | "bad" | "sad" | "calm"
+export type MoodType = "good" | "bad" | "sad" | "calm"
 
-interface MoodRecord {
+export interface CalendarMoodRecord {
   date: string // YYYY-MM-DD
   mood: MoodType
   note?: string
 }
-
-// 샘플 데이터 - 실제 연동 시 props나 API로 교체
-const sampleRecords: MoodRecord[] = [
-  { date: "2026-03-01", mood: "good", note: "좋은 하루였어요." },
-  { date: "2026-03-05", mood: "calm", note: "조용한 하루." },
-  { date: "2026-03-10", mood: "bad", note: "힘든 하루였어요." },
-  { date: "2026-03-15", mood: "sad", note: "조금 우울했어요." },
-  { date: "2026-03-20", mood: "good", note: "즐거운 하루!" },
-  { date: "2026-03-25", mood: "calm", note: "명상 후 편안해졌어요." },
-  { date: "2026-03-28", mood: "good", note: "친구들과 즐거운 시간." },
-  { date: "2026-03-29", mood: "sad", note: "조금 지쳤지만 기록은 이어갔어요." },
-  { date: "2026-03-30", mood: "good", note: "컨디션이 다시 좋아졌어요." },
-  { date: "2026-03-31", mood: "good", note: "마무리가 만족스러운 하루." },
-]
 
 const moodConfig: Record<MoodType, { color: string; iconColor: string; icon: LucideIcon; label: string }> = {
   good:  { color: "bg-[#FFE8B8]", iconColor: "#374151", icon: Smile,    label: "Good" },
@@ -35,7 +21,11 @@ const moodConfig: Record<MoodType, { color: string; iconColor: string; icon: Luc
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"]
 
-export function CalendarView() {
+interface CalendarViewProps {
+  records: CalendarMoodRecord[]
+}
+
+export function CalendarView({ records }: CalendarViewProps) {
   const today = new Date()
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
@@ -51,7 +41,7 @@ export function CalendarView() {
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 
   const getMoodForDate = (dateStr: string) =>
-    sampleRecords.find((r) => r.date === dateStr)
+    records.find((record) => record.date === dateStr)
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
