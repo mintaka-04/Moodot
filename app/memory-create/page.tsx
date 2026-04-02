@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import type { LeafletMap, LeafletMarker, LeafletClickEvent } from "@/types/leaflet"
 import { useEffect, useRef, useState } from "react"
 import {
   X,
@@ -16,38 +17,9 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { BottomNavigation } from "@/components/moodot/bottom-navigation"
 
-declare global {
-  interface Window {
-    L?: LeafletLib
-  }
-}
-
 type MoodType = "good" | "bad" | "sad" | "calm"
 type WithType = "solo" | "together"
 type UploadStatus = "idle" | "uploading" | "success" | "failed"
-type LeafletLatLng = { lat: number; lng: number }
-type LeafletClickEvent = { latlng: LeafletLatLng }
-
-type LeafletMap = {
-  setView(latlng: [number, number], zoom: number): LeafletMap
-  on(event: "click", handler: (event: LeafletClickEvent) => void): void
-  remove(): void
-}
-
-type LeafletMarker = {
-  addTo(map: LeafletMap): LeafletMarker
-  setLatLng(latlng: [number, number]): void
-}
-
-type LeafletTileLayer = {
-  addTo(map: LeafletMap): void
-}
-
-type LeafletLib = {
-  map(container: HTMLElement, options: { zoomControl: boolean }): LeafletMap
-  tileLayer(url: string, options: { attribution: string; maxZoom: number }): LeafletTileLayer
-  marker(latlng: [number, number]): LeafletMarker
-}
 
 const EMOTION_ID_MAP: Record<MoodType, number> = {
   good: 1,
@@ -280,8 +252,8 @@ export default function CreatePage() {
       input.showPicker()
       return
     }
-    input.focus()
-    input.click()
+    ;(input as HTMLInputElement).focus()
+    ;(input as HTMLInputElement).click()
   }
 
   const handlePhotoUpload = async (file: File) => {

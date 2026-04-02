@@ -2,23 +2,10 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import type { LeafletMap, LeafletMarker } from "@/types/leaflet"
 import { Smile, Frown, CloudRain, Leaf, User, Users, MapPin, Pencil } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-// --- Leaflet types ---
-declare global { interface Window { L?: LeafletLib } }
-type LeafletMap = {
-  setView(latlng: [number, number], zoom: number): LeafletMap
-  invalidateSize(): void
-  remove(): void
-}
-type LeafletMarker    = { addTo(map: LeafletMap): LeafletMarker }
-type LeafletTileLayer = { addTo(map: LeafletMap): void }
-type LeafletLib = {
-  map(container: HTMLElement, options: object): LeafletMap
-  tileLayer(url: string, options: { attribution: string; maxZoom: number }): LeafletTileLayer
-  marker(latlng: [number, number]): LeafletMarker
-}
 
 let leafletLoader: Promise<void> | null = null
 function loadLeafletAssets(): Promise<void> {

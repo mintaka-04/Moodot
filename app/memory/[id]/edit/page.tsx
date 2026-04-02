@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import type { LeafletMap, LeafletMarker, LeafletClickEvent } from "@/types/leaflet"
 import {
   X, Smile, Frown, Meh, Leaf,
   Clock3, ChevronRight, ImagePlus, MapPinned, Trash2,
@@ -9,17 +10,6 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { BottomNavigation } from "@/components/moodot/bottom-navigation"
 
-// --- Leaflet types (identical to creation screen) ---
-declare global { interface Window { L?: LeafletLib } }
-type LeafletMap    = { setView(latlng: [number, number], zoom: number): LeafletMap; on(event: "click", handler: (e: LeafletClickEvent) => void): void; remove(): void }
-type LeafletMarker = { addTo(map: LeafletMap): LeafletMarker; setLatLng(latlng: [number, number]): void }
-type LeafletTileLayer = { addTo(map: LeafletMap): void }
-type LeafletLib = {
-  map(container: HTMLElement, options: { zoomControl: boolean }): LeafletMap
-  tileLayer(url: string, options: { attribution: string; maxZoom: number }): LeafletTileLayer
-  marker(latlng: [number, number]): LeafletMarker
-}
-type LeafletClickEvent = { latlng: { lat: number; lng: number } }
 
 let leafletLoader: Promise<void> | null = null
 function loadLeafletAssets(): Promise<void> {

@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 
-let supabaseClient: ReturnType<typeof createClient> | null = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let supabaseClient: ReturnType<typeof createClient<any>> | null = null
 
 export function getSupabaseBrowserClient() {
   if (supabaseClient) return supabaseClient
@@ -12,6 +13,6 @@ export function getSupabaseBrowserClient() {
     throw new Error("Supabase environment variables are missing.")
   }
 
-  supabaseClient = createClient(url, anonKey)
+  supabaseClient = createClient<any>(url, anonKey) // eslint-disable-line @typescript-eslint/no-explicit-any
   return supabaseClient
 }
