@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft, ChevronRight, Smile, Frown, CloudRain, Leaf, type LucideIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ChevronLeft, ChevronRight, Smile, Frown, CloudRain, Leaf, ArrowRight, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export type MoodType = "good" | "bad" | "sad" | "calm"
 
 export interface CalendarMoodRecord {
+  id: number
   date: string // YYYY-MM-DD
   mood: MoodType
   note?: string
@@ -26,6 +28,7 @@ interface CalendarViewProps {
 }
 
 export function CalendarView({ records }: CalendarViewProps) {
+  const router = useRouter()
   const today = new Date()
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
@@ -42,6 +45,10 @@ export function CalendarView({ records }: CalendarViewProps) {
 
   const getMoodForDate = (dateStr: string) =>
     records.find((record) => record.date === dateStr)
+
+  const handleDateClick = (dateStr: string) => {
+    setSelectedDate((currentDate) => currentDate === dateStr ? null : dateStr)
+  }
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -66,6 +73,15 @@ export function CalendarView({ records }: CalendarViewProps) {
   const daysInMonth = getDaysInMonth(currentYear, currentMonth)
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth)
   const selectedRecord = selectedDate ? getMoodForDate(selectedDate) : null
+  const hasCurrentMonthRecords = records.some((record) => {
+    const [recordYear, recordMonth] = record.date.split("-")
+
+    return (
+      Number(recordYear) === currentYear &&
+      Number(recordMonth) === currentMonth + 1
+    )
+  })
+
   return (
     <section className="pt-6">
       {/* 헤더 */}
@@ -127,7 +143,7 @@ export function CalendarView({ records }: CalendarViewProps) {
             return (
               <button
                 key={day}
-                onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                onClick={() => handleDateClick(dateStr)}
                 className={`
                   relative flex flex-col items-center justify-center
                   h-10 w-full rounded-xl text-xs font-medium transition-all
@@ -151,6 +167,12 @@ export function CalendarView({ records }: CalendarViewProps) {
         </div>
       </div>
 
+      {!hasCurrentMonthRecords && (
+        <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-center text-sm text-mb-muted shadow-sm shadow-mb-dark/5">
+          이번 달 기록이 없어요.
+        </p>
+      )}
+
       {/* 무드 범례 */}
       <div className="flex justify-center gap-4 mt-4">
         {Object.entries(moodConfig).map(([key, val]) => {
@@ -173,7 +195,11 @@ export function CalendarView({ records }: CalendarViewProps) {
             {selectedDate.replace(/-/g, ".")}
           </p>
           {selectedRecord ? (
-            <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => router.push(`/memory/${selectedRecord.id}`)}
+              className="flex w-full items-start gap-3 rounded-xl text-left transition-colors hover:bg-mb-unselected/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-mb-primary focus-visible:ring-offset-2"
+            >
               {(() => {
                 const Icon = moodConfig[selectedRecord.mood].icon
                 return (
@@ -187,15 +213,21 @@ export function CalendarView({ records }: CalendarViewProps) {
                   </span>
                 )
               })()}
-              <div>
-                <p className="text-xs font-semibold text-mb-dark">
-                  {moodConfig[selectedRecord.mood].label}
-                </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-mb-dark">
+                    {moodConfig[selectedRecord.mood].label}
+                  </p>
+                  <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-mb-primary">
+                    상세 보기
+                    <ArrowRight className="h-3 w-3" />
+                  </span>
+                </div>
                 {selectedRecord.note && (
                   <p className="text-xs text-mb-muted mt-1">{selectedRecord.note}</p>
                 )}
               </div>
-            </div>
+            </button>
           ) : (
             <p className="text-sm text-mb-muted">이 날의 기록이 없어요.</p>
           )}
