@@ -23,25 +23,25 @@ class NegativeStreakRule(Rule):
         return consecutive >= self.threshold
     
     def get_reason(self) -> str:
-        return InterventionReason.NEGATIVE_STREAK.value
-    
+        return InterventionReason.NEGATIVE_PATTERN.value
+
     def get_severity(self, context: Dict[str, Any]) -> int:
         """연속 개수로 심각도 판단"""
         consecutive = context.get('consecutive_negative', 0)
-        
+
         if consecutive >= 5:
             return 3  # 심각
         elif consecutive >= 4:
             return 2  # 중간
         return 1      # 보통
-    
+
     def get_tone(self) -> InterventionTone:
         """컨텍스트 기반 동적 톤 선택"""
         if not self.last_context:
             return InterventionTone.EMPATHETIC
-        
+
         severity = self.get_severity(self.last_context)
-        return InterventionTone.from_context('negative_streak', severity)
+        return InterventionTone.from_context('negative_pattern', severity)
     
     def get_context_data(self, context: Dict[str, Any]) -> Dict[str, Any]:
         return {

@@ -7,6 +7,7 @@ from .frequency_limit import FrequencyLimitRule
 from .no_recent_record import NoRecentRecordRule
 from .negative_streak import NegativeStreakRule
 from .negative_ratio import NegativeRatioRule
+from .positive_streak import PositiveStreakRule
 
 from tools.emotion_tools import (
     get_days_since_last_record,
@@ -43,6 +44,7 @@ class RuleEngine:
             NegativeStreakRule(threshold=3),
             NoRecentRecordRule(threshold_days=3),
             NegativeRatioRule(threshold_ratio=0.7, min_count=5),
+            PositiveStreakRule(threshold=3),
         ]
         
         # 우선순위 순으로 정렬
@@ -148,20 +150,22 @@ class RuleEngine:
                 get_hours_since_last_intervention(self.supabase, user_id),
                 get_days_since_last_record(self.supabase, user_id),
                 get_consecutive_emotions(self.supabase, user_id, "negative"),
+                get_consecutive_emotions(self.supabase, user_id, "positive"),
                 get_recent_emotions(self.supabase, user_id, days=7),
                 get_emotion_statistics(self.supabase, user_id, days=7),
                 return_exceptions=True  # 예외 발생해도 계속 진행
             )
-            
+
             # 결과 언팩
-            today_count, hours_since, days_since, consecutive_neg, recent_emotions, stats = results
-            
+            today_count, hours_since, days_since, consecutive_neg, consecutive_pos, recent_emotions, stats = results
+
             return {
                 'user_id': user_id,
                 'today_count': today_count if not isinstance(today_count, Exception) else 0,
                 'hours_since_last': hours_since if not isinstance(hours_since, Exception) else None,
                 'days_since_last_record': days_since if not isinstance(days_since, Exception) else None,
                 'consecutive_negative': consecutive_neg if not isinstance(consecutive_neg, Exception) else 0,
+                'consecutive_positive': consecutive_pos if not isinstance(consecutive_pos, Exception) else 0,
                 'recent_emotions': recent_emotions if not isinstance(recent_emotions, Exception) else [],
                 'emotion_stats': stats if not isinstance(stats, Exception) else {}
             }

@@ -26,12 +26,14 @@ from models import (
     InterventionRepository
 )
 
-# ✅ Rule Engine 임포트
 from rules import RuleEngine
+from config import LLMConfig
+from generators import MessageGenerator
 
 # 전역 변수
 intervention_repo: Optional['InterventionRepository'] = None
-rule_engine: Optional[RuleEngine] = None  # ✅ 추가
+rule_engine: Optional[RuleEngine] = None
+message_generator: Optional[MessageGenerator] = None
 
 
 async def create_supabase_client() :
@@ -295,12 +297,20 @@ async def handle_new_emotion(supabase, payload: Dict[str, Any]) -> None:
         logger.info(f"   톤: {decision.get('tone')}")
         logger.info(f"   심각도: {decision.get('severity', 1)}/3")
         
-        # ✅ 메시지 생성 (tone 전달)
-        message = generate_simple_message(
-            decision["reason"], 
-            decision.get("context"),
-            tone=decision.get("tone", "neutral")  # tone 전달
-        )
+        # 메시지 생성 — LLM 우선, 실패 시 템플릿 fallback
+        if message_generator:
+            message, gen_meta = message_generator.generate_with_validation(
+                decision["reason"],
+                decision.get("context", {})
+            )
+            logger.info(f"   생성 방법: {gen_meta.get('generation_method')}")
+        else:
+            message = "(연결실패) " + generate_simple_message(
+                decision["reason"],
+                decision.get("context"),
+                tone=decision.get("tone", "neutral")
+            )
+            logger.info("   생성 방법: template (Ollama 미연결)")
         
         intervention = Intervention(
             user_id=user_id,
@@ -383,14 +393,23 @@ async def initial_check(supabase) -> None:
 
 async def main() -> None:
     """메인 비동기 진입점"""
-    global intervention_repo, rule_engine  # ✅ rule_engine 추가
+    global intervention_repo, rule_engine, message_generator
 
     logger.info("🚀 AI 에이전트 워커 시작...")
     logger.info(f"📡 Supabase URL: {os.getenv('SUPABASE_URL')}")
 
     supabase = await create_supabase_client()
     intervention_repo = InterventionRepository(supabase)
-    rule_engine = RuleEngine(supabase)  # ✅ Rule Engine 초기화
+    rule_engine = RuleEngine(supabase)
+
+    # MessageGenerator 초기화 — Ollama 미실행 시 템플릿 fallback으로 동작
+    try:
+        llm = LLMConfig.create_llm()
+        message_generator = MessageGenerator(llm)
+        logger.info("✅ MessageGenerator 초기화 완료 (Ollama)")
+    except Exception as e:
+        message_generator = None
+        logger.warning(f"⚠️ Ollama 연결 실패 — 템플릿 메시지로 동작합니다: {e}")
 
     # Realtime 채널 생성 및 구독
     max_retries = 3

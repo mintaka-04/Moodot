@@ -47,18 +47,13 @@ class InterventionTone(Enum):
             적절한 톤
         
         Example:
-            >>> tone = InterventionTone.from_context('negative_streak', severity=2)
+            >>> tone = InterventionTone.from_context('negative_pattern', severity=2)
             >>> print(tone.value)  # 'supportive'
         """
         context = context or {}
         
         # 규칙별 톤 매핑
         tone_mapping = {
-            'negative_streak': {
-                1: cls.EMPATHETIC,      # 연속 3개 → 공감
-                2: cls.SUPPORTIVE,      # 연속 4개 → 지지
-                3: cls.CONCERNED        # 연속 5개+ → 걱정
-            },
             'negative_pattern': {
                 1: cls.SUPPORTIVE,      # 부정 비율 70% → 지지
                 2: cls.COMFORTING,      # 부정 비율 80% → 위로

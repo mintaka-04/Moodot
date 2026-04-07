@@ -35,7 +35,7 @@ class NegativeRatioRule(Rule):
         return negative_ratio >= self.threshold_ratio
     
     def get_reason(self) -> str:
-        return InterventionReason.NEGATIVE_STREAK.value
+        return InterventionReason.NEGATIVE_PATTERN.value
     
     def get_severity(self, context: Dict[str, Any]) -> int:
         """부정 비율로 심각도 판단"""

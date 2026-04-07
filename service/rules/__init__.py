@@ -16,6 +16,7 @@ from .frequency_limit import FrequencyLimitRule
 from .no_recent_record import NoRecentRecordRule
 from .negative_streak import NegativeStreakRule
 from .negative_ratio import NegativeRatioRule
+from .positive_streak import PositiveStreakRule
 
 __all__ = [
     'Rule',
@@ -25,4 +26,5 @@ __all__ = [
     'NoRecentRecordRule',
     'NegativeStreakRule',
     'NegativeRatioRule',
+    'PositiveStreakRule',
 ]
