@@ -1,18 +1,30 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight, Smile, Frown, CloudRain, Leaf, ArrowRight, type LucideIcon } from "lucide-react"
+import { ChevronLeft, ChevronRight, Smile, Frown, CloudRain, Leaf, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export type MoodType = "good" | "bad" | "sad" | "calm"
+type MoodType = "good" | "bad" | "sad" | "calm"
 
-export interface CalendarMoodRecord {
-  id: number
+interface MoodRecord {
   date: string // YYYY-MM-DD
   mood: MoodType
   note?: string
 }
+
+// 샘플 데이터 - 실제 연동 시 props나 API로 교체
+const sampleRecords: MoodRecord[] = [
+  { date: "2026-03-01", mood: "good", note: "좋은 하루였어요." },
+  { date: "2026-03-05", mood: "calm", note: "조용한 하루." },
+  { date: "2026-03-10", mood: "bad", note: "힘든 하루였어요." },
+  { date: "2026-03-15", mood: "sad", note: "조금 우울했어요." },
+  { date: "2026-03-20", mood: "good", note: "즐거운 하루!" },
+  { date: "2026-03-25", mood: "calm", note: "명상 후 편안해졌어요." },
+  { date: "2026-03-28", mood: "good", note: "친구들과 즐거운 시간." },
+  { date: "2026-03-29", mood: "sad", note: "조금 지쳤지만 기록은 이어갔어요." },
+  { date: "2026-03-30", mood: "good", note: "컨디션이 다시 좋아졌어요." },
+  { date: "2026-03-31", mood: "good", note: "마무리가 만족스러운 하루." },
+]
 
 const moodConfig: Record<MoodType, { color: string; iconColor: string; icon: LucideIcon; label: string }> = {
   good:  { color: "bg-[#FFE8B8]", iconColor: "#374151", icon: Smile,    label: "Good" },
@@ -23,12 +35,7 @@ const moodConfig: Record<MoodType, { color: string; iconColor: string; icon: Luc
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"]
 
-interface CalendarViewProps {
-  records: CalendarMoodRecord[]
-}
-
-export function CalendarView({ records }: CalendarViewProps) {
-  const router = useRouter()
+export function CalendarView() {
   const today = new Date()
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
@@ -44,11 +51,7 @@ export function CalendarView({ records }: CalendarViewProps) {
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 
   const getMoodForDate = (dateStr: string) =>
-    records.find((record) => record.date === dateStr)
-
-  const handleDateClick = (dateStr: string) => {
-    setSelectedDate((currentDate) => currentDate === dateStr ? null : dateStr)
-  }
+    sampleRecords.find((r) => r.date === dateStr)
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -73,15 +76,6 @@ export function CalendarView({ records }: CalendarViewProps) {
   const daysInMonth = getDaysInMonth(currentYear, currentMonth)
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth)
   const selectedRecord = selectedDate ? getMoodForDate(selectedDate) : null
-  const hasCurrentMonthRecords = records.some((record) => {
-    const [recordYear, recordMonth] = record.date.split("-")
-
-    return (
-      Number(recordYear) === currentYear &&
-      Number(recordMonth) === currentMonth + 1
-    )
-  })
-
   return (
     <section className="pt-6">
       {/* 헤더 */}
@@ -143,7 +137,7 @@ export function CalendarView({ records }: CalendarViewProps) {
             return (
               <button
                 key={day}
-                onClick={() => handleDateClick(dateStr)}
+                onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                 className={`
                   relative flex flex-col items-center justify-center
                   h-10 w-full rounded-xl text-xs font-medium transition-all
@@ -167,12 +161,6 @@ export function CalendarView({ records }: CalendarViewProps) {
         </div>
       </div>
 
-      {!hasCurrentMonthRecords && (
-        <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-center text-sm text-mb-muted shadow-sm shadow-mb-dark/5">
-          이번 달 기록이 없어요.
-        </p>
-      )}
-
       {/* 무드 범례 */}
       <div className="flex justify-center gap-4 mt-4">
         {Object.entries(moodConfig).map(([key, val]) => {
@@ -195,11 +183,7 @@ export function CalendarView({ records }: CalendarViewProps) {
             {selectedDate.replace(/-/g, ".")}
           </p>
           {selectedRecord ? (
-            <button
-              type="button"
-              onClick={() => router.push(`/memory/${selectedRecord.id}`)}
-              className="flex w-full items-start gap-3 rounded-xl text-left transition-colors hover:bg-mb-unselected/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-mb-primary focus-visible:ring-offset-2"
-            >
+            <div className="flex items-start gap-3">
               {(() => {
                 const Icon = moodConfig[selectedRecord.mood].icon
                 return (
@@ -213,21 +197,15 @@ export function CalendarView({ records }: CalendarViewProps) {
                   </span>
                 )
               })()}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold text-mb-dark">
-                    {moodConfig[selectedRecord.mood].label}
-                  </p>
-                  <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-mb-primary">
-                    상세 보기
-                    <ArrowRight className="h-3 w-3" />
-                  </span>
-                </div>
+              <div>
+                <p className="text-xs font-semibold text-mb-dark">
+                  {moodConfig[selectedRecord.mood].label}
+                </p>
                 {selectedRecord.note && (
                   <p className="text-xs text-mb-muted mt-1">{selectedRecord.note}</p>
                 )}
               </div>
-            </button>
+            </div>
           ) : (
             <p className="text-sm text-mb-muted">이 날의 기록이 없어요.</p>
           )}

@@ -1,16 +1,13 @@
 import { CalendarView } from "@/components/moodot/calendar-view"
 import { TopAppBar } from "@/components/moodot/top-app-bar"
 import { BottomNavigation } from "@/components/moodot/bottom-navigation"
-import { getCalendarRecords } from "@/lib/supabase/calendar-records"
 
-export default async function CalendarPage() {
-  const records = await getCalendarRecords()
-
+export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-mb-bg relative">
       <TopAppBar />
       <main className="relative mx-auto max-w-[375px] px-5 pt-16 pb-32">
-        <CalendarView records={records} />
+        <CalendarView />
       </main>
       <BottomNavigation />
     </div>
