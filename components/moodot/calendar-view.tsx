@@ -10,6 +10,7 @@ export type MoodType = "good" | "bad" | "sad" | "calm"
 export interface CalendarMoodRecord {
   id: number
   date: string // YYYY-MM-DD
+  memoryAt?: string
   mood: MoodType
   note?: string
 }
@@ -46,6 +47,15 @@ export function CalendarView({ records }: CalendarViewProps) {
   const getMoodForDate = (dateStr: string) =>
     records.find((record) => record.date === dateStr)
 
+  const getRecordsForDate = (dateStr: string) =>
+    records
+      .filter((record) => record.date === dateStr)
+      .sort((a, b) => {
+        if (!a.memoryAt || !b.memoryAt) return b.id - a.id
+
+        return new Date(b.memoryAt).getTime() - new Date(a.memoryAt).getTime()
+      })
+
   const handleDateClick = (dateStr: string) => {
     setSelectedDate((currentDate) => currentDate === dateStr ? null : dateStr)
   }
@@ -72,7 +82,7 @@ export function CalendarView({ records }: CalendarViewProps) {
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth)
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth)
-  const selectedRecord = selectedDate ? getMoodForDate(selectedDate) : null
+  const selectedRecords = selectedDate ? getRecordsForDate(selectedDate) : []
   const hasCurrentMonthRecords = records.some((record) => {
     const [recordYear, recordMonth] = record.date.split("-")
 
@@ -194,40 +204,45 @@ export function CalendarView({ records }: CalendarViewProps) {
           <p className="text-sm font-semibold text-mb-dark mb-2">
             {selectedDate.replace(/-/g, ".")}
           </p>
-          {selectedRecord ? (
-            <button
-              type="button"
-              onClick={() => router.push(`/memory/${selectedRecord.id}`)}
-              className="flex w-full items-start gap-3 rounded-xl text-left transition-colors hover:bg-mb-unselected/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-mb-primary focus-visible:ring-offset-2"
-            >
-              {(() => {
-                const Icon = moodConfig[selectedRecord.mood].icon
-                return (
-                  <span
-                    className={`
-                      h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0
-                      ${moodConfig[selectedRecord.mood].color}
-                    `}
-                  >
-                    <Icon className="h-5 w-5" style={{ color: moodConfig[selectedRecord.mood].iconColor }} />
-                  </span>
-                )
-              })()}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold text-mb-dark">
-                    {moodConfig[selectedRecord.mood].label}
-                  </p>
-                  <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-mb-primary">
-                    상세 보기
-                    <ArrowRight className="h-3 w-3" />
-                  </span>
-                </div>
-                {selectedRecord.note && (
-                  <p className="text-xs text-mb-muted mt-1">{selectedRecord.note}</p>
-                )}
-              </div>
-            </button>
+          {selectedRecords.length > 0 ? (
+            <div className="space-y-2">
+              {selectedRecords.map((record) => (
+                <button
+                  key={record.id}
+                  type="button"
+                  onClick={() => router.push(`/memory/${record.id}`)}
+                  className="flex w-full items-start gap-3 rounded-xl text-left transition-colors hover:bg-mb-unselected/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-mb-primary focus-visible:ring-offset-2"
+                >
+                  {(() => {
+                    const Icon = moodConfig[record.mood].icon
+                    return (
+                      <span
+                        className={`
+                          h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0
+                          ${moodConfig[record.mood].color}
+                        `}
+                      >
+                        <Icon className="h-5 w-5" style={{ color: moodConfig[record.mood].iconColor }} />
+                      </span>
+                    )
+                  })()}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-mb-dark">
+                        {moodConfig[record.mood].label}
+                      </p>
+                      <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-mb-primary">
+                        상세 보기
+                        <ArrowRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                    {record.note && (
+                      <p className="text-xs text-mb-muted mt-1">{record.note}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
           ) : (
             <p className="text-sm text-mb-muted">이 날의 기록이 없어요.</p>
           )}
