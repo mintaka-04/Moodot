@@ -24,12 +24,15 @@ function AuthAvatar() {
     )
   }
 
-  // 비로그인
-  if (user === null) {
+  // 비로그인 또는 익명 사용자 → 동일하게 사람 아이콘 표시
+  if (user === null || user.is_anonymous) {
     return (
       <button
         type="button"
-        onClick={signInWithGoogle}
+        onClick={async () => {
+          try { await signInWithGoogle() }
+          catch { alert("로그인에 실패했습니다.") }
+        }}
         aria-label="계정"
         className="h-10 w-10 rounded-full ring-2 ring-mb-unselected/60 bg-mb-card flex items-center justify-center hover:ring-mb-accent-mint/60 hover:bg-mb-unselected/50 transition-all duration-200"
       >
@@ -47,9 +50,9 @@ function AuthAvatar() {
     <button
       type="button"
       onClick={async () => {
+        if (!confirm("로그아웃 하시겠습니까?")) return
         await signOut()
-        setUser(null)
-        router.push("/")
+        window.location.reload()
       }}
       aria-label="로그아웃"
       className="rounded-full ring-2 ring-mb-accent-mint/40 hover:opacity-80 transition-opacity duration-200"

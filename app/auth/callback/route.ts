@@ -1,14 +1,15 @@
 import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+  const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
 
-  if (code) {
-    const cookieStore = await cookies()
+  // redirect response를 먼저 만들고, 쿠키를 이 response에 직접 설정한다.
+  // cookies() / cookieStore.set() 패턴은 NextResponse에 쿠키를 포함시키지 않는다.
+  const response = NextResponse.redirect(new URL("/", origin))
 
+  if (code) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
@@ -16,12 +17,13 @@ export async function GET(request: NextRequest) {
       {
         cookies: {
           getAll() {
-            return cookieStore.getAll()
+            return request.cookies.getAll()
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
+            cookiesToSet.forEach(({ name, value, options }) => {
+              request.cookies.set(name, value, options)
+              response.cookies.set(name, value, options)
+            })
           },
         },
       }
@@ -29,10 +31,11 @@ export async function GET(request: NextRequest) {
 
     try {
       await supabase.auth.exchangeCodeForSession(code)
+      console.log("[auth/callback] exchangeCodeForSession 완료")
     } catch (error) {
-      console.error("[auth] callback error:", error)
+      console.error("[auth/callback] exchangeCodeForSession error:", error)
     }
   }
 
-  return NextResponse.redirect(new URL("/", request.url))
+  return response
 }
