@@ -87,8 +87,8 @@ class OllamaProvider(BaseLLMProvider):
     def check_model(cls, model: str) -> bool:
         """로컬에 모델이 존재하는지 확인"""
         try:
-            models = ollama_client.Client(host=cls.BASE_URL).list()
-            names = [m["name"] for m in models.get("models", [])]
+            response = ollama_client.Client(host=cls.BASE_URL).list()
+            names = [m.model for m in response.models]
             return model in names
         except Exception as e:
             logger.error(f"❌ 모델 확인 실패: {e}")
@@ -98,8 +98,8 @@ class OllamaProvider(BaseLLMProvider):
     def list_models(cls) -> list[str]:
         """로컬에 다운로드된 모델 목록"""
         try:
-            models = ollama_client.Client(host=cls.BASE_URL).list()
-            return [m["name"] for m in models.get("models", [])]
+            response = ollama_client.Client(host=cls.BASE_URL).list()
+            return [m.model for m in response.models]
         except Exception as e:
             logger.error(f"❌ 모델 목록 조회 실패: {e}")
             return []
