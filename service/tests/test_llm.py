@@ -4,7 +4,8 @@ LLM 프로바이더 테스트
 """
 import os
 from dotenv import load_dotenv
-from config import LLMFactory, OllamaProvider
+from config import LLMFactory
+from config.ollama_provider import OllamaProvider
 
 load_dotenv()
 
