@@ -12,12 +12,24 @@ const GRAVITY = 0.045
 
 type Phase = "moving" | "bouncing" | "paused" | "dropping" | "bounce_up" | "resting"
 
+type ColorScheme = { body: string; inner: string; stroke: string; eye: string }
+
+const EMOTION_COLORS: Record<number, ColorScheme> = {
+  1: { body: "#FFF5DF", inner: "#FDEECB", stroke: "#C4956A", eye: "#8B6530" }, // good
+  2: { body: "#FDEAEA", inner: "#F9D5D5", stroke: "#C48B8B", eye: "#8B4040" }, // bad
+  3: { body: "#E3F5FD", inner: "#CCEDF9", stroke: "#6BAAC4", eye: "#2C6880" }, // sad
+  4: { body: "#D9F4CD", inner: "#CFEFC2", stroke: "#97B48B", eye: "#6b8a52" }, // calm
+}
+
+const DEFAULT_COLORS: ColorScheme = { body: "#F7F9FD", inner: "#EDF2F8", stroke: "#B8CADC", eye: "#7090AA" }
+
 function randomVel() {
   const angle = Math.random() * Math.PI * 2
   return { x: Math.cos(angle) * SPEED, y: Math.sin(angle) * SPEED }
 }
 
-export function Character() {
+export function Character({ emotionId }: { emotionId?: number | null }) {
+  const colors = (emotionId != null && EMOTION_COLORS[emotionId]) ? EMOTION_COLORS[emotionId] : DEFAULT_COLORS
   const [clickActive, setClickActive] = useState(false)
   const [tiltAngle, setTiltAngle]     = useState(0)
   const wanderX = useMotionValue(0)
@@ -192,10 +204,10 @@ export function Character() {
       >
         {/* Body */}
         <svg viewBox="0 0 470 461" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
-          <circle cx="242" cy="228" r="220.5" fill="#D9F4CD"/>
-          <path d="M28.5 263.5V253.5L21.5 241.5V227.5V210.5L28.5 197.5V179.5L21.5 161.5L28.5 151.5V136.5L45.5 123.5L56.5 109.5H64.5L72.5 92.5L79.5 72.5L93.5 61.5L105.5 55.5H117.5V44.5L133.5 39.5H140.5L149.5 26.5H164.5L175.5 18.5H193.5L202.5 26.5L217.5 18.5H232.5L238.5 7.5H251.5H259.5L268.5 18.5H287.5L302.5 26.5L319.5 34.5H329.5H343.5L357.5 44.5L369.5 55.5L384.5 67.5H392.5L408.5 72.5L415.5 85.5V92.5L408.5 109.5L415.5 114.5L430.5 123.5" stroke="#97B48B" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M447.5 173.5V196.5L453.5 209.5L447.5 226.5V237.5L453.5 252.5L462.5 260.5L453.5 271.5L447.5 285.5V300.5L440.5 313.5V325.5L428.5 333.5L419.5 345.5L413.5 355.5V368.5L406.5 376.5M43.5 308.5L53.5 325.5L60.5 340.5L71.5 355.5L78.5 376.5L85.5 389.5V402.5L106.5 411.5H124.5L129.5 423.5H149.5L157.5 428.5L167.5 441.5H183.5H201.5L213.5 453.5H224.5L232.5 441.5L245.5 435.5L255.5 441.5H262.5H280.5L290.5 435.5L299.5 428.5L310.5 435.5L317.5 441.5V428.5L333.5 423.5L344.5 411.5H357.5M434.5 141.5H447.5L453.5 135.5M434.5 158.5H453.5M393.5 389.5V397.5L399.5 402.5M370.5 389.5L376.5 402.5L386.5 416.5M7.5 285.5H23.5L38.5 278.5M12.5 305.5H23.5L32.5 300.5H43.5" stroke="#97B48B" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round"/>
-          <circle cx="257" cy="234" r="134.5" fill="#CFEFC2"/>
+          <circle cx="242" cy="228" r="220.5" fill={colors.body}/>
+          <path d="M28.5 263.5V253.5L21.5 241.5V227.5V210.5L28.5 197.5V179.5L21.5 161.5L28.5 151.5V136.5L45.5 123.5L56.5 109.5H64.5L72.5 92.5L79.5 72.5L93.5 61.5L105.5 55.5H117.5V44.5L133.5 39.5H140.5L149.5 26.5H164.5L175.5 18.5H193.5L202.5 26.5L217.5 18.5H232.5L238.5 7.5H251.5H259.5L268.5 18.5H287.5L302.5 26.5L319.5 34.5H329.5H343.5L357.5 44.5L369.5 55.5L384.5 67.5H392.5L408.5 72.5L415.5 85.5V92.5L408.5 109.5L415.5 114.5L430.5 123.5" stroke={colors.stroke} strokeWidth="15" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M447.5 173.5V196.5L453.5 209.5L447.5 226.5V237.5L453.5 252.5L462.5 260.5L453.5 271.5L447.5 285.5V300.5L440.5 313.5V325.5L428.5 333.5L419.5 345.5L413.5 355.5V368.5L406.5 376.5M43.5 308.5L53.5 325.5L60.5 340.5L71.5 355.5L78.5 376.5L85.5 389.5V402.5L106.5 411.5H124.5L129.5 423.5H149.5L157.5 428.5L167.5 441.5H183.5H201.5L213.5 453.5H224.5L232.5 441.5L245.5 435.5L255.5 441.5H262.5H280.5L290.5 435.5L299.5 428.5L310.5 435.5L317.5 441.5V428.5L333.5 423.5L344.5 411.5H357.5M434.5 141.5H447.5L453.5 135.5M434.5 158.5H453.5M393.5 389.5V397.5L399.5 402.5M370.5 389.5L376.5 402.5L386.5 416.5M7.5 285.5H23.5L38.5 278.5M12.5 305.5H23.5L32.5 300.5H43.5" stroke={colors.stroke} strokeWidth="15" strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx="257" cy="234" r="134.5" fill={colors.inner}/>
         </svg>
 
         {/* Eye — 깜빡임 */}
@@ -206,8 +218,8 @@ export function Character() {
           style={{ transformOrigin: "center" }}
         >
           <svg viewBox="0 0 232 59" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
-            <circle cx="29.5" cy="29.5" r="29.5" fill="#6b8a52"/>
-            <circle cx="202.5" cy="29.5" r="29.5" fill="#6b8a52"/>
+            <circle cx="29.5" cy="29.5" r="29.5" fill={colors.eye}/>
+            <circle cx="202.5" cy="29.5" r="29.5" fill={colors.eye}/>
           </svg>
         </motion.div>
 
@@ -218,7 +230,7 @@ export function Character() {
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.05 }}
         >
           <svg viewBox="0 0 546 379" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
-            <path d="M76.5 7.50183L86 28.5018M39 28.5018L50 45.0018M7.5 87.5018H29.5M511 289.002H522H530.5L538.5 297.002M498.5 320.502L511 328.502L522 335.502M474 355.002L482.5 365.502L486.5 371.002" stroke="#97B48B" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M76.5 7.50183L86 28.5018M39 28.5018L50 45.0018M7.5 87.5018H29.5M511 289.002H522H530.5L538.5 297.002M498.5 320.502L511 328.502L522 335.502M474 355.002L482.5 365.502L486.5 371.002" stroke={colors.stroke} strokeWidth="15" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </motion.div>
       </motion.div>
