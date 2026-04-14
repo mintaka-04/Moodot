@@ -28,20 +28,25 @@ function randomVel() {
   return { x: Math.cos(angle) * SPEED, y: Math.sin(angle) * SPEED }
 }
 
-export function Character({ emotionId }: { emotionId?: number | null }) {
+export function Character({ emotionId, hasMessage }: { emotionId?: number | null; hasMessage?: boolean }) {
   const colors = (emotionId != null && EMOTION_COLORS[emotionId]) ? EMOTION_COLORS[emotionId] : DEFAULT_COLORS
   const [clickActive, setClickActive] = useState(false)
   const [tiltAngle, setTiltAngle]     = useState(0)
-  const wanderX = useMotionValue(0)
-  const wanderY = useMotionValue(0)
+  const [isBouncing, setIsBouncing]   = useState(false)
+  const wanderX  = useMotionValue(0)
+  const wanderY  = useMotionValue(0)
+  const floatY   = useMotionValue(0)
   const outerRef = useRef<HTMLDivElement>(null)
 
-  const posRef       = useRef({ x: 0, y: 0 })
-  const velRef       = useRef(randomVel())
-  const phaseRef     = useRef<Phase>("moving")
-  const boundsRef    = useRef({ x: 80, y: 25 })
-  const bounceOrigin = useRef({ x: 0, y: 0 })
-  const peakPassed   = useRef(false)
+  const posRef        = useRef({ x: 0, y: 0 })
+  const velRef        = useRef(randomVel())
+  const phaseRef      = useRef<Phase>("moving")
+  const boundsRef     = useRef({ x: 80, y: 25 })
+  const bounceOrigin  = useRef({ x: 0, y: 0 })
+  const peakPassed    = useRef(false)
+  const floatAngle    = useRef(0)
+  const hairFloatY    = useMotionValue(0)
+  const hairAngle     = useRef(0)
 
   // stable setter refs
   const setClickActiveRef = useRef(setClickActive)
@@ -166,15 +171,68 @@ export function Character({ emotionId }: { emotionId?: number | null }) {
       frameId = requestAnimationFrame(loop)
     }
 
+    if (hasMessage) return
     frameId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(frameId)
+  }, [hasMessage])
+
+  // float RAF — re-render 없이 항상 동작
+  useEffect(() => {
+    const AMP        = 4
+    const SPEED      = 0.014
+    const HAIR_AMP   = 3
+    const HAIR_SPEED = 0.010 // 몸보다 느리게
+    let rafId: number
+
+    const loop = () => {
+      const dropping = phaseRef.current === "dropping" ||
+                       phaseRef.current === "bounce_up" ||
+                       phaseRef.current === "resting"
+      if (!dropping) {
+        floatAngle.current += SPEED
+        hairAngle.current  += HAIR_SPEED
+        floatY.set(-AMP * Math.sin(floatAngle.current))
+        hairFloatY.set(-HAIR_AMP * Math.sin(hairAngle.current))
+      } else {
+        floatY.set(floatY.get() * 0.85)
+        hairFloatY.set(hairFloatY.get() * 0.85)
+      }
+      rafId = requestAnimationFrame(loop)
+    }
+
+    rafId = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(rafId)
   }, [])
+
+  useEffect(() => {
+    if (!hasMessage) { setIsBouncing(false); return }
+
+    let active = true
+    let tid: ReturnType<typeof setTimeout>
+
+    const scheduleNext = () => {
+      tid = setTimeout(() => {
+        if (!active) return
+        setIsBouncing(true)
+        setTimeout(() => {
+          if (!active) return
+          setIsBouncing(false)
+          scheduleNext()
+        }, 380)
+      }, 1800 + Math.random() * 2800)
+    }
+
+    scheduleNext()
+    return () => { active = false; clearTimeout(tid) }
+  }, [hasMessage])
 
   return (
     <motion.div
       ref={outerRef}
       className="relative flex items-end justify-center w-[50px] h-[55px]"
-      style={{ x: wanderX, y: wanderY }}
+      animate={hasMessage ? { x: 0, y: 0, scale: 1.2 } : { scale: 1 }}
+      style={hasMessage ? {} : { x: wanderX, y: wanderY }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
     >
       {/* Shadow */}
       <motion.div
@@ -187,21 +245,23 @@ export function Character({ emotionId }: { emotionId?: number | null }) {
         </svg>
       </motion.div>
 
-      {/* Character */}
+      {/* Character — float는 motion value(floatY), rotate만 animate */}
       <motion.div
         className="absolute bottom-1 left-1/2 -translate-x-1/2 w-[45px] cursor-pointer"
-        animate={
-          clickActive
-            ? { rotate: tiltAngle, y: 0 }
-            : { y: [0, -6, 0], rotate: 0 }
-        }
-        transition={
-          clickActive
-            ? { rotate: { duration: 0.35, ease: "easeOut" } }
-            : { duration: 4, repeat: Infinity, ease: "easeInOut" }
-        }
+        animate={{ rotate: clickActive ? tiltAngle : 0 }}
+        transition={{ rotate: { duration: 0.35, ease: "easeOut" } }}
+        style={{ y: floatY }}
         onClick={handleClick}
       >
+        {/* 바운스 — float 위에 독립적으로 합산 */}
+        <motion.div
+          className="relative w-full"
+          animate={isBouncing ? { y: [0, -12, 0] } : { y: 0 }}
+          transition={isBouncing
+            ? { duration: 0.38, ease: ["easeOut", "easeIn"] }
+            : { duration: 0.15 }
+          }
+        >
         {/* Body */}
         <svg viewBox="0 0 470 461" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
           <circle cx="242" cy="228" r="220.5" fill={colors.body}/>
@@ -226,12 +286,13 @@ export function Character({ emotionId }: { emotionId?: number | null }) {
         {/* Hair */}
         <motion.div
           className="absolute top-[8%] -left-[6%] w-[116%]"
-          animate={clickActive ? {} : { y: [0, -6, 0] }}
+          style={{ y: hairFloatY }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.05 }}
         >
           <svg viewBox="0 0 546 379" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
             <path d="M76.5 7.50183L86 28.5018M39 28.5018L50 45.0018M7.5 87.5018H29.5M511 289.002H522H530.5L538.5 297.002M498.5 320.502L511 328.502L522 335.502M474 355.002L482.5 365.502L486.5 371.002" stroke={colors.stroke} strokeWidth="15" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
+        </motion.div>
         </motion.div>
       </motion.div>
     </motion.div>

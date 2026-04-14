@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { motion } from "framer-motion"
 import { Character } from "@/components/ai/character"
 import {
   getLatestPendingIntervention,
@@ -21,7 +22,40 @@ const EMOTION_BG: Record<number, BgScheme> = {
 
 const DEFAULT_BG: BgScheme = { gradient: "linear-gradient(to bottom right, rgba(180,200,230,0.14), rgba(180,200,230,0.07), rgba(255,255,255,1))", glow: "rgba(180,200,230,0.28)", border: "rgba(180,200,230,0.18)" }
 
+const BUBBLES = [
+  { left: "30%", delay: 0,   duration: 3.0 },
+  { left: "55%", delay: 1.4, duration: 3.5 },
+  { left: "68%", delay: 2.6, duration: 2.8 },
+]
+
+const EMOTION_BUBBLE_COLOR: Record<number, string> = {
+  1: "#C4956A",
+  2: "#C48B8B",
+  3: "#6BAAC4",
+  4: "#97B48B",
+}
+const DEFAULT_BUBBLE_COLOR = "#B8CADC"
+
+function FloatingBubbles({ color }: { color: string }) {
+  return (
+    <>
+      {BUBBLES.map((b, i) => (
+        <motion.span
+          key={i}
+          className="absolute bottom-[30%] text-2xl font-black pointer-events-none select-none"
+          style={{ left: b.left, color }}
+          animate={{ y: [0, -28, -52], opacity: [0, 0.6, 0] }}
+          transition={{ duration: b.duration, delay: b.delay, repeat: Infinity, repeatDelay: 1.5, ease: "easeOut" }}
+        >
+          !
+        </motion.span>
+      ))}
+    </>
+  )
+}
+
 export function AIInsight() {
+  const [showMessage, setShowMessage] = useState(false)
   const [intervention, setIntervention] = useState<Intervention | null>(null)
   const [latestEmotionId, setLatestEmotionId] = useState<number | null>(null)
 
@@ -64,26 +98,62 @@ export function AIInsight() {
 
   const bg = (latestEmotionId != null && EMOTION_BG[latestEmotionId]) ? EMOTION_BG[latestEmotionId] : DEFAULT_BG
 
+  const handleCardClick = () => {
+    if (!intervention) return
+    if (showMessage) {
+      setShowMessage(false)
+      setTimeout(() => setIntervention(null), 600)
+    } else {
+      setShowMessage(true)
+    }
+  }
+
   return (
     <section className="pt-8">
       <div
-        className="relative overflow-hidden rounded-xl p-5 border transition-colors duration-700"
-        style={{ background: bg.gradient, borderColor: bg.border }}
+        className="relative"
+        style={{ perspective: "1000px" }}
+        onClick={handleCardClick}
       >
-        <div
-          className="absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl transition-colors duration-700"
-          style={{ background: bg.glow }}
-        />
+        <motion.div
+          className="relative w-full"
+          animate={{ rotateY: showMessage ? 180 : 0 }}
+          transition={{ duration: 0.55, ease: "easeInOut" }}
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          {/* 앞면 — 캐릭터 */}
+          <div
+            className="relative overflow-hidden rounded-xl p-5 border transition-colors duration-700"
+            style={{ background: bg.gradient, borderColor: bg.border, backfaceVisibility: "hidden" }}
+          >
+            <div
+              className="absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl transition-colors duration-700"
+              style={{ background: bg.glow }}
+            />
+            <div className="relative flex items-center justify-center h-[120px]">
+              {!!intervention && (
+                <FloatingBubbles
+                  color={latestEmotionId != null ? (EMOTION_BUBBLE_COLOR[latestEmotionId] ?? DEFAULT_BUBBLE_COLOR) : DEFAULT_BUBBLE_COLOR}
+                />
+              )}
+              <Character emotionId={latestEmotionId} hasMessage={!!intervention} />
+            </div>
+          </div>
 
-        <div className="relative flex items-center justify-center h-[120px]">
-          <Character emotionId={latestEmotionId} />
-        </div>
-
-        {intervention && (
-          <p className="relative mt-3 font-body text-sm text-mb-dark leading-relaxed">
-            {intervention.message}
-          </p>
-        )}
+          {/* 뒷면 — 메시지 */}
+          <div
+            className="absolute inset-0 overflow-hidden rounded-xl p-5 border flex items-center justify-center transition-colors duration-700"
+            style={{ background: bg.gradient, borderColor: bg.border, backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+          >
+            <div
+              className="absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl"
+              style={{ background: bg.glow }}
+            />
+            <p className="relative font-body text-sm text-mb-dark leading-relaxed text-center">
+              {intervention?.message}
+            </p>
+          </div>
+        </motion.div>
       </div>
     </section>
   )
