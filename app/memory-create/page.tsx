@@ -16,6 +16,7 @@ import {
   MapPinned,
 } from "lucide-react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { compressImage } from "@/lib/image-compression"
 import { uploadImage } from "@/lib/storage/image"
 import { createMemory } from "@/lib/services/memory"
 import { BottomNavigation } from "@/components/moodot/bottom-navigation"
@@ -283,7 +284,8 @@ export default function CreatePage() {
       const supabase = getSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("로그인이 필요합니다.")
-      const path = await uploadImage(file, user.id)
+      const uploadFile = await compressImage(file)
+      const path = await uploadImage(uploadFile, user.id)
       setImageUrl(path)
       setUploadStatus("success")
     } catch (error) {
