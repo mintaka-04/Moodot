@@ -82,7 +82,7 @@ export async function getMemoryById(id: number): Promise<MemoryRow> {
 // ---------- Mutations ----------
 
 /** 새 메모리 생성. 에러 시 throw. */
-export async function createMemory(input: CreateMemoryInput): Promise<void> {
+export async function createMemory(input: CreateMemoryInput): Promise<number> {
   const supabase = getSupabaseBrowserClient()
 
   // 세션 확인 — 없으면 익명 로그인 후 재시도
@@ -103,14 +103,18 @@ export async function createMemory(input: CreateMemoryInput): Promise<void> {
   const { data: sessionData } = await supabase.auth.getSession()
   console.log("[createMemory] access_token:", sessionData.session?.access_token ? "있음" : "없음(MISSING)")
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("memories")
     .insert({ ...input, user_id: user.id } as unknown as never)
+    .select("id")
+    .single()
 
   if (error) {
     console.error("[createMemory] insert error:", error.code, error.message)
     throw error
   }
+
+  return (data as { id: number }).id
 }
 
 /** 기존 메모리 수정. 에러 시 throw. */
