@@ -14,6 +14,7 @@ from prompts import (
     EMOTION_NAMES_KR
 )
 from scoring import get_action_directive
+from security import sanitize
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ class MessageGenerator:
 
     def _extract_recent_memories(self, recent_emotions: list, limit: int = 3) -> str:
         texts = [
-            e.get("text", "").strip()
+            sanitize(e.get("text", "").strip())
             for e in recent_emotions[:limit]
             if e.get("text", "").strip()
         ]
