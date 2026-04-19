@@ -63,10 +63,7 @@ export function AIInsight() {
   // 초기 로드
   useEffect(() => {
     getLatestPendingIntervention().then((data) => {
-      if (data) {
-        setIntervention(data)
-        markInterventionAsShown(data.id)
-      }
+      if (data) setIntervention(data)
     })
 
     getRecentMemories(1)
@@ -90,9 +87,7 @@ export function AIInsight() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "interventions" },
         (payload) => {
-          const newItem = payload.new as Intervention
-          setIntervention(newItem)
-          markInterventionAsShown(newItem.id)
+          setIntervention(payload.new as Intervention)
         }
       )
       .subscribe()
@@ -109,6 +104,7 @@ export function AIInsight() {
       setTimeout(() => setIntervention(null), 600)
     } else {
       setShowMessage(true)
+      markInterventionAsShown(intervention.id)
     }
   }
 
