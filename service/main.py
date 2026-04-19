@@ -23,7 +23,8 @@ from models import (
     Intervention,
     InterventionStatus,
     InterventionReason,
-    InterventionRepository
+    InterventionRepository,
+    REASON_TO_MESSAGE_TYPE
 )
 
 from rules import RuleEngine
@@ -311,7 +312,8 @@ async def handle_new_emotion(supabase, payload: Dict[str, Any]) -> None:
         intervention = Intervention(
             user_id=user_id,
             reason=decision["reason"],
-            message=message
+            message=message,
+            message_type=REASON_TO_MESSAGE_TYPE.get(decision["reason"])
         )
         
         intervention_id = await intervention_repo.create(intervention)

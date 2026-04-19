@@ -7,6 +7,7 @@ export type Intervention = {
   reason: string
   message: string
   status: "pending" | "shown" | "interacted" | "dismissed"
+  message_type: "empathy" | "encouragement" | "checkin" | null
   created_at: string
 }
 
