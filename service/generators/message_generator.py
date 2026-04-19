@@ -13,7 +13,7 @@ from prompts import (
     format_emotion_distribution,
     EMOTION_NAMES_KR
 )
-from scoring import get_behavior_note
+from scoring import get_action_directive
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +52,9 @@ class MessageGenerator:
             template = get_prompt_template(template_key)
             prompt = template.format(system_prompt=SYSTEM_PROMPT, **formatted_context)
 
-            behavior_note = get_behavior_note(context.get("feedback_avg_score"))
-            if behavior_note:
-                prompt += f"\n참고: {behavior_note}"
+            directive = get_action_directive(context.get("action", ""))
+            if directive:
+                prompt += f"\n행동 지침: {directive}"
 
             logger.debug(f"생성할 프롬프트:\n{prompt}")
 

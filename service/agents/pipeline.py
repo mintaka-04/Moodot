@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 from models import Intervention, InterventionRepository, REASON_TO_MESSAGE_TYPE
 from rules import RuleEngine
 from generators import MessageGenerator
-from scoring import calculate_score, save_score
+from scoring import calculate_score, save_score, decide_action
 
 logger = logging.getLogger(__name__)
 
@@ -73,9 +73,14 @@ class Pipeline:
                 logger.info("⏭️ LLM 미연결 — 개입 생성 생략 (미처리 상태 유지)")
                 return
 
+            context = decision.get("context", {})
+            action = decide_action(context.get("feedback_avg_score"), decision["reason"])
+            context["action"] = action
+            logger.info(f"   행동: {action}")
+
             message, gen_meta = self.message_generator.generate_with_validation(
                 decision["reason"],
-                decision.get("context", {})
+                context
             )
             logger.info(f"   생성 방법: {gen_meta.get('generation_method')}")
 
@@ -83,7 +88,7 @@ class Pipeline:
                 user_id=user_id,
                 reason=decision["reason"],
                 message=message,
-                message_type=REASON_TO_MESSAGE_TYPE.get(decision["reason"])
+                message_type=action
             )
 
             intervention_id = await self.intervention_repo.create(intervention)

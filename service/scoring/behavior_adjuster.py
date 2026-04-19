@@ -5,6 +5,19 @@ import logging
 from typing import Optional
 from supabase import Client
 
+REASON_TO_DEFAULT_ACTION = {
+    "negative_pattern":      "empathy",
+    "negative_ratio":        "empathy",
+    "positive_reinforcement": "encouragement",
+    "no_recent_record":      "checkin",
+}
+
+ACTION_DIRECTIVE = {
+    "checkin":       "가볍게 안부만 물어보세요. 감정 분석이나 깊은 공감 없이 짧고 가볍게 접근하세요.",
+    "empathy":       "적극적으로 공감하며 감정에 깊게 공명해도 됩니다.",
+    "encouragement": "격려하는 톤으로 긍정적으로 접근하세요.",
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,15 +69,24 @@ def get_adjusted_max_per_day(avg_score: Optional[float], base: int = 2) -> int:
     return base
 
 
-def get_behavior_note(avg_score: Optional[float]) -> str:
+def decide_action(avg_score: Optional[float], reason: str) -> str:
     """
-    평균 점수에 따른 LLM 행동 힌트 문장.
-    프롬프트 끝에 덧붙여 사용.
+    피드백 트렌드 + reason 기반으로 실제 행동(action) 결정.
+    반환값: "empathy" | "encouragement" | "checkin"
+
+        avg < 0  → checkin  (반응 나쁨 → 가볍게만)
+        avg >= 2 → reason에 맞게 적극 접근 (empathy or encouragement)
+        그 외    → reason의 자연스러운 매핑 따름
     """
-    if avg_score is None:
-        return ""
-    if avg_score >= 2:
-        return "최근 사용자 반응이 긍정적입니다. 더 따뜻하게 공감해도 됩니다."
-    if avg_score < 0:
-        return "최근 사용자 반응이 좋지 않았습니다. 더 짧고 조심스럽게 접근하세요."
-    return ""
+    if avg_score is not None and avg_score < 0:
+        return "checkin"
+    if avg_score is not None and avg_score >= 2:
+        if reason in ("negative_pattern", "negative_ratio"):
+            return "empathy"
+        return "encouragement"
+    return REASON_TO_DEFAULT_ACTION.get(reason, "checkin")
+
+
+def get_action_directive(action: str) -> str:
+    """action에 대응하는 LLM 프롬프트 지시문 반환"""
+    return ACTION_DIRECTIVE.get(action, "")
