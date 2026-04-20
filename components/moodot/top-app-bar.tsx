@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { getCurrentUser } from "@/lib/supabase/auth"
+import { subscribeToAuth } from "@/lib/supabase/auth"
 import type { User } from "@supabase/supabase-js"
 
 function AuthAvatar() {
@@ -14,7 +14,7 @@ function AuthAvatar() {
   const router = useRouter()
 
   useEffect(() => {
-    getCurrentUser().then(setUser)
+    return subscribeToAuth(setUser)
   }, [])
 
   // 판단 전: 빈 아바타 자리 유지
