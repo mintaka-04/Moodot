@@ -46,23 +46,23 @@ type FeedbackVariant = {
 
 const FEEDBACK_VARIANTS: Record<string, [FeedbackVariant, FeedbackVariant]> = {
   empathy: [
-    { prompt: "이렇게 느껴졌을 수도 있겠다 싶었어.", positive: "비슷한 것 같아", negative: "조금 달라" },
-    { prompt: "나는 이렇게 이해했는데… 맞을까는 모르겠네.", positive: "맞는 편이야", negative: "다른 느낌이야" },
+    { prompt: "", positive: "비슷한 것 같아", negative: "조금 달라" },
+    { prompt: "", positive: "맞는 편이야", negative: "다른 느낌이야" },
   ],
   encouragement: [
-    { prompt: "조금 힘이 됐으면 좋겠다고 생각했어.", positive: "도움 됐어", negative: "잘 모르겠어" },
-    { prompt: "이런 말이 괜찮은 타이밍이었을까 싶긴 해.", positive: "괜찮았어", negative: "지금은 아닌 것 같아" },
+    { prompt: "", positive: "도움 됐어", negative: "잘 모르겠어" },
+    { prompt: "", positive: "괜찮았어", negative: "지금은 아닌 것 같아" },
   ],
   checkin: [
-    { prompt: "그냥 가볍게 한 번 말 걸어봤어.", positive: "괜찮았어", negative: "조금 뜬금없었어" },
-    { prompt: "이 정도로 인사하는 건 괜찮은지 궁금하네.", positive: "이 정도 좋아", negative: "조금 줄여도 될 것 같아" },
+    { prompt: "", positive: "괜찮았어", negative: "조금 뜬금없었어" },
+    { prompt: "", positive: "이 정도 좋아", negative: "조금 줄여도 될 것 같아" },
   ],
 }
 
 const FEEDBACK_RESPONSES: Record<string, { positive: string; negative: string }> = {
-  empathy:       { positive: "응, 비슷하게 느꼈다면 다행이다.", negative: "아, 내가 조금 다르게 이해했나 보다." },
-  encouragement: { positive: "조금이라도 괜찮았으면 좋겠네.", negative: "지금은 그런 말이 아닐 수도 있겠다." },
-  checkin:       { positive: "가볍게 남긴 건데 괜찮았다니 다행이다.", negative: "조금 뜬금없었을 수도 있겠다." },
+  empathy:       { positive: "그럴 수도 있겠다 싶었어.", negative: "그렇게 느낄 수도 있겠다." },
+  encouragement: { positive: "천천히 해도 괜찮아.", negative: "지금은 그런 얘기가 아닐 수도 있겠네." },
+  checkin:       { positive: "그렇구나, 그렇게 지내고 있었네.", negative: "조금 어색했을 수도 있겠다." },
 }
 
 function FloatingBubbles({ color }: { color: string }) {
@@ -90,11 +90,30 @@ export function AIInsight() {
   const [isLoading, setIsLoading] = useState(true)
   const [feedbackGiven, setFeedbackGiven] = useState(false)
   const [feedbackResponse, setFeedbackResponse] = useState<string | null>(null)
+  const [aiState, setAiState] = useState<"idle" | "thinking" | "has_message">("idle")
 
   // 초기 로드
   useEffect(() => {
-getLatestPendingIntervention().then((data) => {
-      if (data) setIntervention(data)
+    const supabase = getSupabaseBrowserClient()
+
+    getLatestPendingIntervention().then((data) => {
+      if (data) {
+        setIntervention(data)
+        setAiState("has_message")
+      }
+    })
+
+    // 최근 기록이 미처리 상태면 생각중
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from("memories")
+        .select("processed")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .then(({ data }) => {
+          if (data?.[0]?.processed === false) setAiState("thinking")
+        })
     })
 
     getRecentMemories(1)
@@ -109,26 +128,39 @@ getLatestPendingIntervention().then((data) => {
       })
   }, [])
 
-  // Realtime 구독 — 새 intervention INSERT 시 표시
+  // Realtime 구독 — memories INSERT/UPDATE + interventions INSERT
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
-    const channel = supabase
-      .channel("interventions-insert")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "interventions" },
-        (payload) => {
-          setIntervention(payload.new as Intervention)
+
+    const memoriesChannel = supabase
+      .channel("memories-changes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "memories" }, () => {
+        setAiState("thinking")
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "memories" }, (payload) => {
+        if (payload.new?.processed === true) {
+          setAiState((prev) => prev === "thinking" ? "idle" : prev)
         }
-      )
+      })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    const interventionsChannel = supabase
+      .channel("interventions-insert")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "interventions" }, (payload) => {
+        setIntervention(payload.new as Intervention)
+        setAiState("has_message")
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(memoriesChannel)
+      supabase.removeChannel(interventionsChannel)
+    }
   }, [])
 
   const bg = (isLoading || latestEmotionId == null || !EMOTION_BG[latestEmotionId]) ? DEFAULT_BG : EMOTION_BG[latestEmotionId]
 
-  const variantIdx = intervention ? parseInt(intervention.id.slice(-1), 16) % 2 : 0
+  const variantIdx = intervention?.id != null ? Number(intervention.id) % 2 : 0
 
   const handleCardClick = () => {
     if (!intervention) return
@@ -184,7 +216,7 @@ getLatestPendingIntervention().then((data) => {
                   color={latestEmotionId != null ? (EMOTION_BUBBLE_COLOR[latestEmotionId] ?? DEFAULT_BUBBLE_COLOR) : DEFAULT_BUBBLE_COLOR}
                 />
               )}
-              <Character emotionId={latestEmotionId} hasMessage={!!intervention} isThinking={isLoading} />
+              <Character emotionId={latestEmotionId} hasMessage={aiState === "has_message"} isThinking={aiState === "thinking"} />
             </div>
           </div>
 
@@ -206,7 +238,7 @@ getLatestPendingIntervention().then((data) => {
               if (!variant) return null
               return (
                 <div className="relative flex flex-col items-center gap-2 w-full">
-                  <p className="font-body text-xs text-mb-dark/50 text-center">{variant.prompt}</p>
+                  {variant.prompt && <p className="font-body text-xs text-mb-dark/50 text-center">{variant.prompt}</p>}
                   <div className="flex gap-3">
                     <button
                       className="px-3 py-1 rounded-full text-xs font-body border transition-colors"
