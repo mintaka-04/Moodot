@@ -29,11 +29,20 @@ function buildCreatePayload(input: CreateMemoryInput, userId: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const t0 = Date.now()
+  console.log("[perf][memories/list] start")
+
   try {
+    const t1 = Date.now()
     const supabase = await getSupabaseServerClient()
+    console.log(`[perf][memories/list] supabase client: ${Date.now() - t1}ms`)
+
+    const t2 = Date.now()
     const {
       data: { user },
     } = await supabase.auth.getUser()
+    console.log(`[perf][memories/list] auth.getUser: ${Date.now() - t2}ms`)
+
     const limitParam = request.nextUrl.searchParams.get("limit")
     const offsetParam = request.nextUrl.searchParams.get("offset")
 
@@ -55,10 +64,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const t3 = Date.now()
     const { data, error } = await query
+    console.log(`[perf][memories/list] db query: ${Date.now() - t3}ms`)
     if (error) throw error
 
-    return NextResponse.json(((data ?? []) as MemoryDbRow[]).map(toPublicMemoryRow))
+    const t4 = Date.now()
+    const rows = ((data ?? []) as MemoryDbRow[]).map(toPublicMemoryRow)
+    console.log(`[perf][memories/list] decrypt: ${Date.now() - t4}ms`)
+
+    console.log(`[perf][memories/list] total: ${Date.now() - t0}ms`)
+    return NextResponse.json(rows)
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "메모리를 불러오지 못했습니다."
