@@ -34,6 +34,7 @@ export function CalendarView({ records }: CalendarViewProps) {
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [expandedDate, setExpandedDate] = useState<string | null>(null)
 
   const getDaysInMonth = (year: number, month: number) =>
     new Date(year, month + 1, 0).getDate()
@@ -43,9 +44,6 @@ export function CalendarView({ records }: CalendarViewProps) {
 
   const formatDate = (year: number, month: number, day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-
-  const getMoodForDate = (dateStr: string) =>
-    records.find((record) => record.date === dateStr)
 
   const getRecordsForDate = (dateStr: string) =>
     records
@@ -57,7 +55,22 @@ export function CalendarView({ records }: CalendarViewProps) {
       })
 
   const handleDateClick = (dateStr: string) => {
-    setSelectedDate((currentDate) => currentDate === dateStr ? null : dateStr)
+    if (selectedDate !== dateStr) {
+      setSelectedDate(dateStr)
+      setExpandedDate(null)
+      return
+    }
+
+    setSelectedDate(null)
+    setExpandedDate(null)
+  }
+
+  const handleRecordCardClick = () => {
+    if (!selectedDate || selectedRecords.length <= 1) return
+
+    setExpandedDate((currentExpandedDate) =>
+      currentExpandedDate === selectedDate ? null : selectedDate
+    )
   }
 
   const handlePrevMonth = () => {
@@ -68,6 +81,7 @@ export function CalendarView({ records }: CalendarViewProps) {
       setCurrentMonth((m) => m - 1)
     }
     setSelectedDate(null)
+    setExpandedDate(null)
   }
 
   const handleNextMonth = () => {
@@ -78,11 +92,14 @@ export function CalendarView({ records }: CalendarViewProps) {
       setCurrentMonth((m) => m + 1)
     }
     setSelectedDate(null)
+    setExpandedDate(null)
   }
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth)
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth)
   const selectedRecords = selectedDate ? getRecordsForDate(selectedDate) : []
+  const isExpanded = selectedDate !== null && expandedDate === selectedDate
+  const visibleSelectedRecords = isExpanded ? selectedRecords : selectedRecords.slice(0, 1)
   const hasCurrentMonthRecords = records.some((record) => {
     const [recordYear, recordMonth] = record.date.split("-")
 
@@ -143,7 +160,8 @@ export function CalendarView({ records }: CalendarViewProps) {
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1
             const dateStr = formatDate(currentYear, currentMonth, day)
-            const record = getMoodForDate(dateStr)
+            const dateRecords = getRecordsForDate(dateStr)
+            const latestRecord = dateRecords[0]
             const isToday =
               day === today.getDate() &&
               currentMonth === today.getMonth() &&
@@ -166,10 +184,17 @@ export function CalendarView({ records }: CalendarViewProps) {
                 `}
               >
                 <span>{day}</span>
-                {record && !isSelected && (
-                  <span
-                    className={`mt-0.5 h-4 w-4 rounded-md ${moodConfig[record.mood].color}`}
-                  />
+                {latestRecord && !isSelected && (
+                  <span className="relative mt-0.5">
+                    <span
+                      className={`block h-4 w-4 rounded-md ${moodConfig[latestRecord.mood].color}`}
+                    />
+                    {dateRecords.length > 1 && (
+                      <span className="absolute -right-1 -top-1 h-3 min-w-3 rounded-full bg-mb-primary px-0.5 text-[8px] leading-3 text-white">
+                        {dateRecords.length}
+                      </span>
+                    )}
+                  </span>
                 )}
               </button>
             )
@@ -206,12 +231,24 @@ export function CalendarView({ records }: CalendarViewProps) {
           </p>
           {selectedRecords.length > 0 ? (
             <div className="space-y-2">
-              {selectedRecords.map((record) => (
+              {visibleSelectedRecords.map((record, index) => {
+                const canExpandFromCard = !isExpanded && index === 0 && selectedRecords.length > 1
+                const actionLabel = canExpandFromCard ? "펼쳐보기" : "상세 보기"
+                const handleRecordAction = () => {
+                  if (canExpandFromCard) {
+                    handleRecordCardClick()
+                    return
+                  }
+
+                  router.push(`/memory/${record.id}`)
+                }
+
+                return (
                 <button
                   key={record.id}
                   type="button"
-                  onClick={() => router.push(`/memory/${record.id}`)}
-                  className="flex w-full items-start gap-3 rounded-xl text-left transition-colors hover:bg-mb-unselected/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-mb-primary focus-visible:ring-offset-2"
+                  onClick={handleRecordAction}
+                  className="flex w-full cursor-pointer items-start gap-3 rounded-xl text-left transition-colors hover:bg-mb-unselected/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-mb-primary focus-visible:ring-offset-2"
                 >
                   {(() => {
                     const Icon = moodConfig[record.mood].icon
@@ -232,7 +269,7 @@ export function CalendarView({ records }: CalendarViewProps) {
                         {moodConfig[record.mood].label}
                       </p>
                       <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-mb-primary">
-                        상세 보기
+                        {actionLabel}
                         <ArrowRight className="h-3 w-3" />
                       </span>
                     </div>
@@ -241,7 +278,8 @@ export function CalendarView({ records }: CalendarViewProps) {
                     )}
                   </div>
                 </button>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <p className="text-sm text-mb-muted">이 날의 기록이 없어요.</p>
