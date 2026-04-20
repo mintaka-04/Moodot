@@ -5,6 +5,7 @@
 import logging
 from typing import List, Dict, Optional, Any
 from datetime import datetime, timedelta
+from security.memory_crypto import decrypt_memory_text
 
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,8 @@ async def get_recent_emotions(
                 id,
                 emotion_id,
                 text,
+                text_ciphertext,
+                text_iv,
                 created_at,
                 user_id,
                 emotion_categories(emotion)
@@ -62,11 +65,21 @@ async def get_recent_emotions(
         if hasattr(result, 'data') and result.data:
             emotions = []
             for item in result.data:
+                try:
+                    plain_text = decrypt_memory_text(
+                        item.get('text_ciphertext'),
+                        item.get('text_iv'),
+                        item.get('text'),
+                    )
+                except Exception as e:
+                    logger.warning(f"텍스트 복호화 실패 (id={item['id']}): {e}")
+                    plain_text = item.get('text', '')
+
                 emotion_data = {
                     'id': item['id'],
                     'emotion_id': item['emotion_id'],
                     'emotion_name': item['emotion_categories']['emotion'] if item.get('emotion_categories') else 'Unknown',
-                    'text': item.get('text', ''),
+                    'text': plain_text or '',
                     'created_at': item['created_at'],
                     'user_id': item.get('user_id')
                 }

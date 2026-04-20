@@ -23,10 +23,12 @@ from agents import Pipeline
 
 
 async def create_supabase_client():
-    return await acreate_client(
+    client = await acreate_client(
         os.getenv("SUPABASE_URL"),
         os.getenv("SUPABASE_SERVICE_KEY")
     )
+    client.realtime.timeout = 30
+    return client
 
 
 async def process_missed_emotions(supabase, pipeline: Pipeline) -> None:

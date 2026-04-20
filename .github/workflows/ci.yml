@@ -25,3 +25,24 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  test-python:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r service/requirements.txt
+
+      - name: Run unit tests
+        run: |
+          cd service
+          python tests/test_units.py
+          python tests/test_units_rules.py

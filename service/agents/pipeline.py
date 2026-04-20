@@ -32,7 +32,8 @@ class Pipeline:
     async def process_emotion(self, payload: Dict[str, Any]) -> None:
         """새 감정 INSERT 이벤트 처리"""
         try:
-            emotion = payload["record"]
+            data = payload.get("data", payload)
+            emotion = data.get("record") or data.get("new") or {}
             user_id = emotion.get("user_id", DEFAULT_USER_ID)
 
             emotion_id = emotion.get("emotion_id")

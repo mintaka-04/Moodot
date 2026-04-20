@@ -100,7 +100,7 @@ class MessageGenerator:
         texts = [
             sanitize(e.get("text", "").strip())
             for e in recent_emotions[:limit]
-            if e.get("text", "").strip()
+            if isinstance(e, dict) and e.get("text", "").strip()
         ]
         if not texts:
             return "(기록 내용 없음)"
@@ -127,7 +127,7 @@ class MessageGenerator:
                 formatted = {
                     "consecutive_count": consecutive,
                     "recent_emotions": format_emotion_list(
-                        [e.get("emotion_name", "") for e in context.get("recent_emotions", [])]
+                        [e.get("emotion_name", "") if isinstance(e, dict) else e for e in context.get("recent_emotions", [])]
                     ),
                     "recent_memories": recent_memories,
                 }
@@ -147,7 +147,7 @@ class MessageGenerator:
             formatted = {
                 "consecutive_count": context.get("consecutive_positive", 0),
                 "recent_emotions": format_emotion_list(
-                    [e.get("emotion_name", "") for e in context.get("recent_emotions", [])]
+                    [e.get("emotion_name", "") if isinstance(e, dict) else e for e in context.get("recent_emotions", [])]
                 ),
                 "recent_memories": recent_memories,
             }
