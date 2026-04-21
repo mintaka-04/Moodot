@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Search, User, Users, Plus } from "lucide-react"
 import { getMemories, type MemoryRow } from "@/lib/services/memory"
+import { MemoriesExportButton } from "@/components/moodot/memories-export-button"
 
 const EMOTION_COLOR_MAP: Record<number, string> = {
   1: "#FFE8B8",
@@ -27,10 +28,15 @@ function formatMemoryDate(value: string | null) {
   })
 }
 
+const PAGE_SIZE = 10
+
 export function MemoriesListView() {
   const [memories, setMemories] = useState<MemoryRow[]>([])
   const [searchText, setSearchText] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const [offset, setOffset] = useState(0)
   const [errorMessage, setErrorMessage] = useState("")
   const router = useRouter()
 
@@ -42,9 +48,11 @@ export function MemoriesListView() {
       setErrorMessage("")
 
       try {
-        const data = await getMemories()
+        const data = await getMemories(PAGE_SIZE, 0)
         if (!mounted) return
         setMemories(data)
+        setOffset(PAGE_SIZE)
+        setHasMore(data.length === PAGE_SIZE)
       } catch (error) {
         if (!mounted) return
         const message = error instanceof Error ? error.message : "메모리를 불러오지 못했습니다."
@@ -60,6 +68,22 @@ export function MemoriesListView() {
     }
   }, [])
 
+  const handleLoadMore = async () => {
+    if (isLoadingMore) return
+    setIsLoadingMore(true)
+    try {
+      const data = await getMemories(PAGE_SIZE, offset)
+      setMemories((prev) => [...prev, ...data])
+      setOffset((prev) => prev + PAGE_SIZE)
+      setHasMore(data.length === PAGE_SIZE)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "메모리를 불러오지 못했습니다."
+      setErrorMessage(`메모리 조회 실패: ${message}`)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
+
   const filteredMemories =
     searchText.trim() === ""
       ? memories
@@ -72,15 +96,18 @@ export function MemoriesListView() {
 
   return (
     <section className="pt-6">
-      <div className="relative mb-4">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-mb-muted" />
-        <input
-          type="text"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          placeholder="Search your memories..."
-          className="h-14 w-full rounded-xl bg-mb-card pl-11 pr-4 font-body text-sm text-mb-dark outline-none transition-all duration-200 placeholder:text-mb-muted focus:ring-2 focus:ring-mb-accent-cyan/50"
-        />
+      <div className="flex gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-mb-muted" />
+          <input
+            type="text"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="Search your memories..."
+            className="h-14 w-full rounded-xl bg-mb-card pl-11 pr-4 font-body text-sm text-mb-dark outline-none transition-all duration-200 placeholder:text-mb-muted focus:ring-2 focus:ring-mb-accent-cyan/50"
+          />
+        </div>
+        <MemoriesExportButton memories={memories} disabled={isLoading} />
       </div>
 
       {/* 기록 남기기 버튼 */}
@@ -147,6 +174,18 @@ export function MemoriesListView() {
               </article>
             )
           })}
+          {searchText.trim() === "" && hasMore && (
+            <div className="flex justify-center pt-2 pb-4">
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="h-10 rounded-full border border-mb-muted/30 bg-mb-card px-6 font-body text-sm text-mb-muted transition-opacity duration-200 disabled:opacity-50"
+              >
+                {isLoadingMore ? "Loading..." : "Load more"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </section>

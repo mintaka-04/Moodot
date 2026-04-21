@@ -29,12 +29,22 @@ function buildCreatePayload(input: CreateMemoryInput, userId: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const t0 = Date.now()
+  console.log("[perf][memories/list] start")
+
   try {
+    const t1 = Date.now()
     const supabase = await getSupabaseServerClient()
+    console.log(`[perf][memories/list] supabase client: ${Date.now() - t1}ms`)
+
+    const t2 = Date.now()
     const {
       data: { user },
     } = await supabase.auth.getUser()
+    console.log(`[perf][memories/list] auth.getUser: ${Date.now() - t2}ms`)
+
     const limitParam = request.nextUrl.searchParams.get("limit")
+    const offsetParam = request.nextUrl.searchParams.get("offset")
 
     if (!user) {
       return jsonError("인증이 필요합니다.", 401)
@@ -48,15 +58,25 @@ export async function GET(request: NextRequest) {
 
     if (limitParam) {
       const limit = Number.parseInt(limitParam, 10)
+      const offset = offsetParam ? Math.max(0, Number.parseInt(offsetParam, 10)) : 0
       if (Number.isFinite(limit) && limit > 0) {
-        query = query.limit(limit)
+        query = query.range(offset, offset + limit - 1)
       }
     }
 
+    const t3 = Date.now()
     const { data, error } = await query
+    console.log(`[perf][memories/list] db query: ${Date.now() - t3}ms`)
     if (error) throw error
 
-    return NextResponse.json(((data ?? []) as MemoryDbRow[]).map(toPublicMemoryRow))
+    const t4 = Date.now()
+    const rows = ((data ?? []) as MemoryDbRow[]).map(toPublicMemoryRow)
+    console.log(`[perf][memories/list] decrypt: ${Date.now() - t4}ms`)
+
+    console.log(`[perf][memories/list] total: ${Date.now() - t0}ms`)
+    return NextResponse.json(rows, {
+      headers: { "Cache-Control": "private, max-age=30" },
+    })
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "메모리를 불러오지 못했습니다."

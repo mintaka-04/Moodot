@@ -35,6 +35,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const t0 = Date.now()
+  console.log("[perf][memories/detail] start")
+
   try {
     const { id: rawId } = await params
     const memoryId = parseMemoryId(rawId)
@@ -43,21 +46,28 @@ export async function GET(
       return jsonError("잘못된 메모리 ID입니다.", 400)
     }
 
+    const t1 = Date.now()
     const supabase = await getSupabaseServerClient()
+    console.log(`[perf][memories/detail] supabase client: ${Date.now() - t1}ms`)
+
+    const t2 = Date.now()
     const {
       data: { user },
     } = await supabase.auth.getUser()
+    console.log(`[perf][memories/detail] auth.getUser: ${Date.now() - t2}ms`)
 
     if (!user) {
       return jsonError("인증이 필요합니다.", 401)
     }
 
+    const t3 = Date.now()
     const { data, error } = await supabase
       .from("memories")
       .select(MEMORY_SELECT_COLUMNS)
       .eq("id", memoryId)
       .eq("user_id", user.id)
       .single()
+    console.log(`[perf][memories/detail] db query: ${Date.now() - t3}ms`)
 
     if (error) {
       if (error.code === "PGRST116") {
@@ -66,7 +76,14 @@ export async function GET(
       throw error
     }
 
-    return NextResponse.json(toPublicMemoryRow(data as MemoryDbRow))
+    const t4 = Date.now()
+    const row = toPublicMemoryRow(data as MemoryDbRow)
+    console.log(`[perf][memories/detail] decrypt: ${Date.now() - t4}ms`)
+
+    console.log(`[perf][memories/detail] total: ${Date.now() - t0}ms`)
+    return NextResponse.json(row, {
+      headers: { "Cache-Control": "private, max-age=30" },
+    })
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "메모리를 불러오지 못했습니다."
