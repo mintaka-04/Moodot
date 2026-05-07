@@ -186,7 +186,7 @@ export default function EditMemoryPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-[375px] flex-col gap-6 px-5 pb-32 pt-24">
+      <main className="mx-auto flex max-w-[375px] flex-col gap-3 px-5 pb-32 pt-24">
         <MemoryForm
           mode="edit"
           mood={mood}
