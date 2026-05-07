@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Manrope } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthInit } from '@/components/layout/auth-init'
 import './globals.css'
+import 'leaflet/dist/leaflet.css'
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
