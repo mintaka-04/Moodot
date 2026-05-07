@@ -83,7 +83,7 @@ export async function GET(
 
     logger.info(`[perf][memories/detail] total: ${Date.now() - t0}ms`)
     return NextResponse.json(row, {
-      headers: { "Cache-Control": "private, max-age=30" },
+      headers: { "Cache-Control": "no-store" },
     })
   } catch (error) {
     logger.error("[memories/detail] GET error:", error)

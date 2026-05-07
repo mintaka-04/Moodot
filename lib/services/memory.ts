@@ -93,10 +93,52 @@ export async function getMemories(limit?: number, offset?: number): Promise<Memo
   return requestJson<MemoryRow[]>("/api/memories")
 }
 
+const RECENT_MEMORIES_TTL_MS = 30_000
+
+type RecentCacheEntry = { data: MemoryRow[]; ts: number }
+const _recentMemoriesCache = new Map<string, RecentCacheEntry>()
+let _recentMemoriesCacheGen = 0
+
+const _recentMemoriesInflight = new Map<string, Promise<MemoryRow[]>>()
+
+export function invalidateRecentMemoriesCache(limit?: number): void {
+  _recentMemoriesCacheGen++
+  if (limit !== undefined) {
+    _recentMemoriesCache.delete(`recent:${limit}`)
+  } else {
+    _recentMemoriesCache.clear()
+    _recentMemoriesInflight.clear()
+  }
+}
+
 /** 최신 N개 (memory_at 내림차순). 에러 시 throw. */
-export async function getRecentMemories(limit: number): Promise<MemoryRow[]> {
-  const params = new URLSearchParams({ limit: String(limit) })
-  return requestJson<MemoryRow[]>(`/api/memories?${params.toString()}`)
+export function getRecentMemories(limit: number): Promise<MemoryRow[]> {
+  const cacheKey = `recent:${limit}`
+  const cached = _recentMemoriesCache.get(cacheKey)
+  if (cached && Date.now() - cached.ts < RECENT_MEMORIES_TTL_MS) {
+    return Promise.resolve(cached.data)
+  }
+
+  const url = `/api/memories?${new URLSearchParams({ limit: String(limit) })}`
+  const gen = _recentMemoriesCacheGen
+  const inflightKey = `${gen}:${url}`
+
+  const inflight = _recentMemoriesInflight.get(inflightKey)
+  if (inflight) return inflight
+
+  const promise = requestJson<MemoryRow[]>(url)
+    .then((data) => {
+      if (_recentMemoriesCacheGen === gen) {
+        _recentMemoriesCache.set(cacheKey, { data, ts: Date.now() })
+      }
+      return data
+    })
+    .finally(() => {
+      _recentMemoriesInflight.delete(inflightKey)
+    })
+
+  _recentMemoriesInflight.set(inflightKey, promise)
+  return promise
 }
 
 /** 단건 조회. 에러 시 throw. */
@@ -133,6 +175,7 @@ export async function createMemory(input: CreateMemoryInput): Promise<number> {
     body: JSON.stringify(input),
   })
 
+  invalidateRecentMemoriesCache()
   return data.id
 }
 
@@ -142,6 +185,7 @@ export async function updateMemory(id: number, input: UpdateMemoryInput): Promis
     method: "PATCH",
     body: JSON.stringify(input),
   })
+  invalidateRecentMemoriesCache()
 }
 
 /** 메모리 삭제. 에러 시 throw. */
@@ -149,4 +193,5 @@ export async function deleteMemory(id: number): Promise<void> {
   const supabase = getSupabaseBrowserClient()
   const { error } = await supabase.from("memories").delete().eq("id", id)
   if (error) throw error
+  invalidateRecentMemoriesCache()
 }

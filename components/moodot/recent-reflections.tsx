@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { getRecentMemories, type MemoryRow } from "@/lib/services/memory"
+import { getRecentMemories, invalidateRecentMemoriesCache, type MemoryRow } from "@/lib/services/memory"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import logger from "@/lib/logger"
 
@@ -73,30 +73,53 @@ export function RecentReflections() {
   useEffect(() => {
     let mounted = true
     let fetched = false
+    let fetchSeq = 0
     const supabase = getSupabaseBrowserClient()
 
     const doFetch = async () => {
       if (fetched || !mounted) return
       fetched = true
+      const mySeq = ++fetchSeq
       try {
         const data = await getRecentMemories(2)
-        if (!mounted) return
+        if (!mounted || mySeq !== fetchSeq) return
         setMemories(data)
       } catch (e) {
         logger.error("[recent-reflections] load error:", e)
+        fetched = false
         // 기존 동작 유지: 에러 시 빈 목록으로 처리
       } finally {
         if (mounted) setIsLoading(false)
       }
     }
 
-    // 이미 세션이 있으면 즉시 fetch
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) void doFetch()
+    // 이미 세션이 있으면 즉시 fetch. 세션이 없으면 로딩 고착을 피한다.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return
+      if (session?.user) {
+        void doFetch()
+      } else {
+        setIsLoading(false)
+      }
     })
 
     // 세션 없을 때 AuthInit의 signInAnonymously 완료를 감지해 fetch
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        invalidateRecentMemoriesCache()
+        fetchSeq++
+        fetched = false
+        setMemories([])
+        setIsLoading(false)
+        return
+      }
+
+      if (event === "SIGNED_IN") {
+        invalidateRecentMemoriesCache()
+        fetchSeq++
+        fetched = false
+      }
+
       if (session?.user) void doFetch()
     })
 
