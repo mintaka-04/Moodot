@@ -150,7 +150,7 @@ export function RecentReflections() {
         <p className="py-4 text-center text-sm text-mb-muted">기록이 없습니다.</p>
       ) : (
         <div className="flex flex-col gap-3">
-          {memories.map((memory, index) => {
+          {memories.map((memory) => {
             const color = EMOTION_COLOR_MAP[memory.emotion_id ?? 1] ?? EMOTION_COLOR_MAP[1]
             const label = formatMemoryDate(memory.memory_at)
             const text = memory.text?.trim() || memory.title?.trim() || "내용 없음"

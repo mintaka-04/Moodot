@@ -32,8 +32,6 @@ export default function CollectionPage() {
 
   useEffect(() => {
     let mounted = true
-    setIsLoading(true)
-    setErrorMessage("")
     getCollections()
       .then((data) => { if (mounted) setCollections(data) })
       .catch((e) => {

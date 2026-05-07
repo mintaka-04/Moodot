@@ -8,6 +8,7 @@ import { compressImage } from "@/lib/image-compression"
 import { uploadImage } from "@/lib/storage/image"
 import { createMemory } from "@/lib/services/memory"
 import logger from "@/lib/logger"
+import { validateMemoryMutationInput } from "@/lib/memory-validation"
 import { BottomNavigation } from "@/components/moodot/bottom-navigation"
 import { EMOTION_ID_MAP, MemoryForm, type MoodType, type UploadStatus, type WithType } from "@/components/moodot/memory-form"
 import { reverseGeocode } from "@/lib/location/reverse-geocode"
@@ -29,6 +30,11 @@ function getBrowserCurrentPosition(): Promise<{ lat: number; lng: number } | nul
       { enableHighAccuracy: true, timeout: 7000, maximumAge: 60_000 },
     )
   })
+}
+
+function toMemoryAtIso(memoryAt: string): string | null {
+  const date = memoryAt ? new Date(memoryAt) : new Date()
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
 export default function CreatePage() {
@@ -132,20 +138,33 @@ export default function CreatePage() {
       return
     }
 
+    const memoryAtIso = toMemoryAtIso(memoryAt)
+    if (!memoryAtIso) {
+      alert("날짜 형식이 올바르지 않습니다.")
+      return
+    }
+
+    const input = {
+      title:          title.trim() === "" ? null : title.trim(),
+      text:           text.trim() === "" ? null : text.trim(),
+      image_url:      imageUrl,
+      emotion_id:     EMOTION_ID_MAP[mood],
+      with_whom:      withWho === "solo" ? "Solo" : "Together",
+      location_lat:   locationLat,
+      location_lng:   locationLng,
+      location_label: locationLabel.trim() === "" ? null : locationLabel.trim(),
+      place_name:     placeName.trim() === "" ? null : placeName.trim(),
+      memory_at:      memoryAtIso,
+    }
+    const validation = validateMemoryMutationInput(input)
+    if (!validation.ok) {
+      alert(validation.error)
+      return
+    }
+
     setIsSaving(true)
     try {
-      const newId = await createMemory({
-        title:          title.trim() === "" ? null : title.trim(),
-        text:           text.trim() === "" ? null : text.trim(),
-        image_url:      imageUrl,
-        emotion_id:     EMOTION_ID_MAP[mood],
-        with_whom:      withWho === "solo" ? "Solo" : "Together",
-        location_lat:   locationLat,
-        location_lng:   locationLng,
-        location_label: locationLabel.trim() === "" ? null : locationLabel.trim(),
-        place_name:     placeName.trim() === "" ? null : placeName.trim(),
-        memory_at:      memoryAt ? new Date(memoryAt).toISOString() : new Date().toISOString(),
-      })
+      const newId = await createMemory(validation.value)
       router.replace(`/memory/${newId}`)
     } catch (error) {
       logger.error("[memory-create] save error:", error)

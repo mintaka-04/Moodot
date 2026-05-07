@@ -33,8 +33,6 @@ export default function EditCollectionPage() {
     }
 
     let mounted = true
-    setIsLoading(true)
-    setLoadError("")
 
     Promise.all([getCollectionById(id), getAvailableMemories(id)])
       .then(([collectionData, memoriesData]) => {

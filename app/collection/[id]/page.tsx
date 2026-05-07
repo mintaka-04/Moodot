@@ -139,8 +139,6 @@ export default function CollectionDetailPage() {
     }
 
     let mounted = true
-    setIsLoading(true)
-    setErrorMessage("")
 
     getCollectionById(id)
       .then((data) => { if (mounted) setCollection(data) })

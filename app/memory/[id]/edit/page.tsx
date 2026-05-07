@@ -8,6 +8,7 @@ import { compressImage } from "@/lib/image-compression"
 import { uploadImage, getSignedUrl } from "@/lib/storage/image"
 import { getMemoryById, updateMemory, deleteMemory } from "@/lib/services/memory"
 import logger from "@/lib/logger"
+import { validateMemoryMutationInput } from "@/lib/memory-validation"
 import { BottomNavigation } from "@/components/moodot/bottom-navigation"
 import {
   EMOTION_ID_MAP,
@@ -25,6 +26,11 @@ function toDatetimeLocal(iso: string | null): string {
   if (isNaN(d.getTime())) return ""
   const pad = (n: number) => String(n).padStart(2, "0")
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function toMemoryAtIso(memoryAt: string): string | null {
+  const date = memoryAt ? new Date(memoryAt) : new Date()
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -135,20 +141,33 @@ export default function EditMemoryPage() {
   const handleSave = async () => {
     if (uploadStatus === "uploading") { alert("사진 업로드가 완료된 후 저장해 주세요."); return }
 
+    const memoryAtIso = toMemoryAtIso(memoryAt)
+    if (!memoryAtIso) {
+      alert("날짜 형식이 올바르지 않습니다.")
+      return
+    }
+
+    const input = {
+      title:          title.trim() || null,
+      text:           text.trim() || null,
+      image_url:      imageUrl,
+      emotion_id:     EMOTION_ID_MAP[mood],
+      with_whom:      withWho === "solo" ? "Solo" : "Together",
+      memory_at:      memoryAtIso,
+      location_lat:   locationLat,
+      location_lng:   locationLng,
+      location_label: locationLabel.trim() || null,
+      place_name:     placeName.trim() || null,
+    }
+    const validation = validateMemoryMutationInput(input)
+    if (!validation.ok) {
+      alert(validation.error)
+      return
+    }
+
     setIsSaving(true)
     try {
-      await updateMemory(memoryId, {
-        title:          title.trim() || null,
-        text:           text.trim() || null,
-        image_url:      imageUrl,
-        emotion_id:     EMOTION_ID_MAP[mood],
-        with_whom:      withWho === "solo" ? "Solo" : "Together",
-        memory_at:      memoryAt ? new Date(memoryAt).toISOString() : new Date().toISOString(),
-        location_lat:   locationLat,
-        location_lng:   locationLng,
-        location_label: locationLabel.trim() || null,
-        place_name:     placeName.trim() || null,
-      })
+      await updateMemory(memoryId, validation.value)
       router.push(`/memory/${memoryId}`)
     } catch (e) {
       logger.error("[memory/edit] save error:", e)

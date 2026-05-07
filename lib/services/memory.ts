@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import logger from "@/lib/logger"
+import type { MemoryMutationInput } from "@/lib/memory-validation"
 
 // ---------- Types ----------
 
@@ -17,31 +18,9 @@ export type MemoryRow = {
   location_lng: number | null
 }
 
-export type CreateMemoryInput = {
-  title: string | null
-  text: string | null
-  image_url: string | null
-  emotion_id: number
-  with_whom: string
-  memory_at: string
-  location_lat: number | null
-  location_lng: number | null
-  location_label: string | null
-  place_name: string | null
-}
+export type CreateMemoryInput = MemoryMutationInput
 
-export type UpdateMemoryInput = {
-  title: string | null
-  text: string | null
-  image_url: string | null
-  emotion_id: number
-  with_whom: string
-  memory_at: string
-  location_lat: number | null
-  location_lng: number | null
-  location_label: string | null
-  place_name: string | null
-}
+export type UpdateMemoryInput = MemoryMutationInput
 
 type ApiErrorResponse = {
   error?: string
