@@ -304,7 +304,7 @@ export function MemoryForm({
           )}
         </div>
 
-        <div className="relative h-48 overflow-hidden rounded-xl border border-[#AAB3B61A] bg-[#EFF4F6]">
+        <div className="relative isolate h-48 overflow-hidden rounded-xl border border-[#AAB3B61A] bg-[#EFF4F6]">
           <MemoryMap lat={locationLat} lng={locationLng} onLocationSelect={onLocationSelect} />
         </div>
         <p className="text-[11px] text-mb-muted">지도를 탭하면 위치가 바로 변경됩니다.</p>
