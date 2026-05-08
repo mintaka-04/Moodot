@@ -16,6 +16,7 @@ export type MemoryRow = {
   location_label: string | null
   location_lat: number | null
   location_lng: number | null
+  processed: boolean | null
 }
 
 export type CreateMemoryInput = MemoryMutationInput
